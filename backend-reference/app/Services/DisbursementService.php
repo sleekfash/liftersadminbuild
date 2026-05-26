@@ -1,0 +1,11 @@
+<?php
+namespace App\Services;
+use App\Enums\{AuditEventType,DisbursementStage}; use App\Models\{DisbursementRequest,DisbursementStatusHistory,Member,User}; use Illuminate\Support\Facades\DB; use Illuminate\Validation\ValidationException;
+class DisbursementService
+{
+    public function __construct(private AuditService $auditService) {}
+    public function create(array $data, User $actor): DisbursementRequest { return DB::transaction(function() use($data,$actor){$member=Member::findOrFail($data['member_id']); if((int)$member->branch_id !== (int)$data['branch_id']) throw ValidationException::withMessages(['branch_id'=>'Disbursement branch must match member branch.']); $r=DisbursementRequest::create([...$data,'requested_by'=>$actor->id,'stage'=>DisbursementStage::DRAFT->value]); $this->history($r,null,DisbursementStage::DRAFT->value,'Disbursement draft created',$actor); $this->auditService->record($actor,AuditEventType::CREATE,'Disbursement draft created',$r,['amount'=>$r->amount]); return $r->load(['member','approvals','statusHistories']);}); }
+    public function submit(DisbursementRequest $r, User $a): DisbursementRequest { return $this->transition($r,DisbursementStage::DRAFT,DisbursementStage::SUBMITTED,'Submitted for branch approval',$a); }
+    public function transition(DisbursementRequest $r,DisbursementStage $expected,DisbursementStage $next,string $reason,User $a): DisbursementRequest { return DB::transaction(function() use($r,$expected,$next,$reason,$a){$r=DisbursementRequest::whereKey($r->id)->lockForUpdate()->firstOrFail(); if($r->stage!==$expected->value) throw ValidationException::withMessages(['stage'=>"Expected {$expected->value}, got {$r->stage}."]); $r->update(['stage'=>$next->value]); $this->history($r,$expected->value,$next->value,$reason,$a); $this->auditService->record($a,AuditEventType::STATUS_CHANGE,"Disbursement moved to {$next->value}",$r,['from'=>$expected->value,'to'=>$next->value]); return $r->refresh()->load(['member','approvals','statusHistories']);}); }
+    private function history(DisbursementRequest $r,?string $from,string $to,string $reason,User $a): void { DisbursementStatusHistory::create(['disbursement_request_id'=>$r->id,'from_stage'=>$from,'to_stage'=>$to,'reason'=>$reason,'changed_by'=>$a->id]); }
+}

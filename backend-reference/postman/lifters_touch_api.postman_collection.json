@@ -1,0 +1,22 @@
+{
+  "info": {
+    "name": "Lifter's Touch API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/v1/health"
+      }
+    },
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/api/v1/login"
+      }
+    }
+  ]
+}
