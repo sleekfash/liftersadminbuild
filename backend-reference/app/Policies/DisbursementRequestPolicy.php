@@ -16,7 +16,7 @@ class DisbursementRequestPolicy
     public function reactivate(User $user,mixed $model): bool { return false; }
     public function terminate(User $user,mixed $model): bool { return false; }
     public function submit(User $user,mixed $model): bool { return $this->sameBranch($user,$model) && (int)($model->requested_by ?? 0) === (int)$user->id; }
-    public function branchApprove(User $user,mixed $model): bool { return $user->hasRole(RoleCode::BRANCH_MANAGER->value); }
+    public function branchApprove(User $user,mixed $model): bool { return $user->hasRole(RoleCode::BRANCH_MANAGER->value) && $this->sameBranch($user,$model) && (int)($model->requested_by ?? 0) !== (int)$user->id; }
     public function financeReview(User $user,mixed $model): bool { return $user->hasRole(RoleCode::FINANCE_OFFICER->value); }
     public function authorize(User $user,mixed $model): bool { return false; }
     public function markPaid(User $user,mixed $model): bool { return $user->hasRole(RoleCode::FINANCE_OFFICER->value); }
