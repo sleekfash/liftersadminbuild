@@ -1,0 +1,58 @@
+name: Security & Backend Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  frontend-audit:
+    name: Frontend dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install deps
+        run: bun install --frozen-lockfile
+      - name: Audit (fail on high/critical)
+        run: |
+          bun audit --audit-level=high || {
+            echo "::error::High or critical vulnerabilities found in frontend dependencies";
+            exit 1;
+          }
+      - name: Typecheck
+        run: bunx tsgo --noEmit
+
+  backend-security:
+    name: Backend security & authorization tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend-reference
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, sqlite, pdo_sqlite
+          coverage: none
+      - name: Install composer deps
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Composer audit (fail on any advisory)
+        run: composer audit --no-dev --format=plain
+      - name: Run PHPUnit (authorization + security suites)
+        env:
+          APP_ENV: testing
+        run: vendor/bin/phpunit --testsuite Feature --stop-on-failure
+      - name: Static policy grep - reject permissive `return true;` in policies
+        run: |
+          set -e
+          # Any policy method that unconditionally returns true (outside of
+          # viewAny / before / SUPER_ADMIN short-circuits) fails the build.
+          if grep -RIn --include='*.php' -E 'function (view|update|delete|submit|branchApprove|financeReview|markPaid)\([^)]*\)\s*:\s*bool\s*\{\s*return true;' app/Policies; then
+            echo "::error::Permissive policy method detected (unconditional return true)";
+            exit 1;
+          fi
