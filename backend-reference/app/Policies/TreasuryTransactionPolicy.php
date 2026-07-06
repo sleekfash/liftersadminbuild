@@ -1,13 +1,14 @@
 <?php
 namespace App\Policies;
-use App\Enums\RoleCode; use App\Models\User;
+use App\Enums\RoleCode; use App\Models\User; use App\Policies\Concerns\ScopesByBranch;
 class TreasuryTransactionPolicy
 {
+    use ScopesByBranch;
     public function before(User $user,string $ability): ?bool { return $user->hasRole(RoleCode::SUPER_ADMIN->value) ? true : null; }
     public function viewAny(User $user): bool { return true; }
-    public function view(User $user,mixed $model): bool { return true; }
+    public function view(User $user,mixed $model): bool { return $this->sameBranch($user,$model); }
     public function create(User $user): bool { return $user->hasAnyRole([RoleCode::SUB_ADMIN->value,RoleCode::BRANCH_MANAGER->value,RoleCode::FINANCE_OFFICER->value]); }
-    public function update(User $user,mixed $model): bool { return true; }
+    public function update(User $user,mixed $model): bool { return $this->sameBranch($user,$model); }
     public function delete(User $user,mixed $model): bool { return false; }
     public function verify(User $user,mixed $model): bool { return $user->hasRole(RoleCode::BRANCH_MANAGER->value); }
     public function activate(User $user,mixed $model): bool { return false; }
