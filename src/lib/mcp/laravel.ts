@@ -77,10 +77,10 @@ export async function callLaravel<T = unknown>(
   }
 
   if (!res.ok) {
-    const message =
-      (parsed && typeof parsed === "object" && "message" in parsed && String((parsed as { message: unknown }).message)) ||
-      res.statusText ||
-      `HTTP ${res.status}`;
+    let message = res.statusText || `HTTP ${res.status}`;
+    if (parsed && typeof parsed === "object" && "message" in parsed) {
+      message = String((parsed as { message: unknown }).message);
+    }
     return { ok: false, status: res.status, error: message, details: parsed };
   }
 
