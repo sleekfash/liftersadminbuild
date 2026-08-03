@@ -19,7 +19,7 @@ class AdminUserSeeder extends Seeder
         }
 
         $attrs = ['branch_id'=>$branch?->id,'name'=>'Super Admin','is_active'=>true];
-        if (!$existing) { $attrs['password'] = Hash::make($password); $attrs['must_change_password'] = true; }
+        if (!$existing) { $attrs['password'] = Hash::make($password); }
 
         $u = User::updateOrCreate(['email'=>$email], $attrs);
         $role = Role::where('code',RoleCode::SUPER_ADMIN->value)->first();
