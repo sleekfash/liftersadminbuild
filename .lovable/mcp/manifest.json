@@ -3,12 +3,16 @@
   "sdk_version": "0.20.0",
   "path": "/mcp",
   "auth": {
-    "type": "none"
+    "type": "oauth",
+    "issuer": "https://oauth-issuer-unset.invalid",
+    "accepted_audiences": [
+      "authenticated"
+    ]
   },
   "mcp": {
     "server": {
       "name": "lifters-touch-mcp",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "title": "Lifter's Touch MCP"
     },
     "tools": [
