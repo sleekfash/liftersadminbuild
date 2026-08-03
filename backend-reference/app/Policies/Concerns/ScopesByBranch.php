@@ -15,6 +15,15 @@ trait ScopesByBranch
         ]);
     }
 
+    /**
+     * Branch staff may list records, but the controller MUST scope the query to
+     * their own branch (see App\Support\ScopesQueryByBranch).
+     */
+    protected function canList(User $user): bool
+    {
+        return $this->isCrossBranch($user) || (int)($user->branch_id ?? 0) > 0;
+    }
+
     protected function sameBranch(User $user, mixed $model): bool
     {
         if ($this->isCrossBranch($user)) return true;

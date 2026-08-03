@@ -3,12 +3,12 @@ import type { ToolContext } from "@lovable.dev/mcp-js";
 /**
  * Shared helper for MCP tools that call the Laravel API.
  *
- * Auth model (see backend-reference/docs/MCP_TOOL_AUTHORIZATION.md):
- * the caller's bearer token is forwarded to Laravel so the same Policy +
- * FormRequest::withValidator() layer runs identically. Until OAuth is wired
- * into defineMcp, we fall back to a server-issued LARAVEL_API_TOKEN so the
- * tools can be exercised end-to-end in staging. Do NOT ship the fallback to
- * a multi-tenant production deployment.
+ * Auth model (see backend-reference/docs/MCP_TOOL_AUTHORIZATION.md): ONLY the
+ * verified caller's bearer token is forwarded to Laravel, so the same Policy +
+ * FormRequest::withValidator() layer (branch scope, self-approval) runs for
+ * every MCP call. There is deliberately no server-issued fallback token: a
+ * shared credential would let an anonymous MCP caller act with someone else's
+ * privileges.
  */
 export type LaravelResult<T = unknown> =
   | { ok: true; status: number; data: T }
@@ -21,8 +21,8 @@ function baseUrl(): string {
 }
 
 function bearer(ctx?: ToolContext): string | null {
-  const fromCtx = ctx && typeof ctx.getToken === "function" ? ctx.getToken() : null;
-  return fromCtx ?? process.env.LARAVEL_API_TOKEN ?? null;
+  if (!ctx || typeof ctx.isAuthenticated !== "function" || !ctx.isAuthenticated()) return null;
+  return (typeof ctx.getToken === "function" ? ctx.getToken() : null) ?? null;
 }
 
 export async function callLaravel<T = unknown>(
@@ -35,8 +35,7 @@ export async function callLaravel<T = unknown>(
     return {
       ok: false,
       status: 401,
-      error:
-        "No bearer token available. Connect via OAuth or set LARAVEL_API_TOKEN for server-to-server use.",
+      error: "Not authenticated. Connect through OAuth so your own identity is used.",
     };
   }
 
