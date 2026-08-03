@@ -5,8 +5,8 @@ class ImportPolicy
 {
     use ScopesByBranch;
     public function before(User $user,string $ability): ?bool { return $user->hasRole(RoleCode::SUPER_ADMIN->value) ? true : null; }
-    public function viewAny(User $user): bool { return $this->canList($user); }
-    public function view(User $user,mixed $model): bool { return $this->sameBranch($user,$model); }
+    public function viewAny(User $user): bool { return $user->hasAnyRole([RoleCode::SUPER_ADMIN->value,RoleCode::SUB_ADMIN->value,RoleCode::FINANCE_OFFICER->value,RoleCode::AUDITOR->value]); }
+    public function view(User $user,mixed $model): bool { return $this->viewAny($user); }
     public function create(User $user): bool { return $user->hasAnyRole([RoleCode::SUB_ADMIN->value,RoleCode::BRANCH_MANAGER->value,RoleCode::FINANCE_OFFICER->value]); }
     public function update(User $user,mixed $model): bool { return $this->sameBranch($user,$model); }
     public function delete(User $user,mixed $model): bool { return false; }
