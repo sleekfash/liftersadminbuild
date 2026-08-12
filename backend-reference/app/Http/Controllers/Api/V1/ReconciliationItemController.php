@@ -5,14 +5,17 @@ use App\Http\Requests\ResolveReconciliationItemRequest;
 use App\Http\Resources\ReconciliationItemResource;
 use App\Models\ReconciliationItem;
 use App\Services\ReconciliationService;
+use App\Support\ScopesQueryByBranch;
 use Illuminate\Http\{JsonResponse,Request};
 class ReconciliationItemController extends Controller
 {
+    use ScopesQueryByBranch;
     public function __construct(private ReconciliationService $reconciliationService) {}
     public function index(Request $request): JsonResponse
     {
         $this->authorize('viewAny', ReconciliationItem::class);
-        return response()->json(['data'=>ReconciliationItemResource::collection(ReconciliationItem::query()->latest()->paginate($request->integer('per_page',15)))]);
+        $q=$this->scopeToBranchVia(ReconciliationItem::query(),$request->user(),'relatedDisbursementRequest');
+        return response()->json(['data'=>ReconciliationItemResource::collection($q->latest()->paginate($request->integer('per_page',15)))]);
     }
     public function underReview(Request $request, ReconciliationItem $item): JsonResponse
     {
