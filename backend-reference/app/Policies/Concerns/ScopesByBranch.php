@@ -32,4 +32,24 @@ trait ScopesByBranch
         $modelBranch = (int)(is_object($model) ? ($model->branch_id ?? 0) : 0);
         return $userBranch === $modelBranch;
     }
+
+    /**
+     * Branch check for records with no direct branch_id column: walk a dotted
+     * relation path (e.g. 'disbursementRequest' or 'run.items') to the owning
+     * branch. Fails closed when the path cannot be resolved.
+     */
+    protected function sameBranchVia(User $user, mixed $model, string $path): bool
+    {
+        if ($this->isCrossBranch($user)) return true;
+        $userBranch = (int)($user->branch_id ?? 0);
+        if (!$userBranch || !is_object($model)) return false;
+
+        $node = $model;
+        foreach (explode('.', $path) as $segment) {
+            if (!is_object($node) || !method_exists($node, $segment)) return false;
+            $node = $node->{$segment};
+            if ($node === null) return false;
+        }
+        return $userBranch === (int)($node->branch_id ?? 0);
+    }
 }
