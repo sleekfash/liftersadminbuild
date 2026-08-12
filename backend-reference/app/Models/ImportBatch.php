@@ -14,4 +14,5 @@ class ImportBatch extends Model
         'completed_at'=>'datetime','resolved_at'=>'datetime','locked_at'=>'datetime','occurred_on'=>'date'
     ];
     public function sheets(){return $this->hasMany(ImportSheetSnapshot::class);} public function rows(){return $this->hasMany(ImportRow::class);}
+    public function uploader(){return $this->belongsTo(User::class,'uploaded_by');}
 }
