@@ -6,7 +6,17 @@ class ReconciliationPolicy
     use ScopesByBranch;
     public function before(User $user,string $ability): ?bool { return $user->hasRole(RoleCode::SUPER_ADMIN->value) ? true : null; }
     public function viewAny(User $user): bool { return $user->hasAnyRole([RoleCode::SUPER_ADMIN->value,RoleCode::SUB_ADMIN->value,RoleCode::FINANCE_OFFICER->value,RoleCode::AUDITOR->value]); }
-    public function view(User $user,mixed $model): bool { if(!$this->viewAny($user)) return false; if($this->isCrossBranch($user)) return true; return $this->sameBranchVia($user,$model,'relatedDisbursementRequest'); }
+    public function view(User $user,mixed $model): bool {
+        if(!$this->viewAny($user)) return false;
+        if($this->isCrossBranch($user)) return true;
+        $branchId=(int)($user->branch_id ?? 0);
+        if(!$branchId || !is_object($model)) return false;
+        // Reconciliation items point at a disbursement request directly.
+        if(method_exists($model,'relatedDisbursementRequest')) return $this->sameBranchVia($user,$model,'relatedDisbursementRequest');
+        // Reconciliation runs are branch-relevant only if they contain an item for this branch.
+        if(method_exists($model,'items')) return $model->items()->whereHas('relatedDisbursementRequest',fn($q)=>$q->where('branch_id',$branchId))->exists();
+        return false;
+    }
     public function create(User $user): bool { return $user->hasAnyRole([RoleCode::SUB_ADMIN->value,RoleCode::BRANCH_MANAGER->value,RoleCode::FINANCE_OFFICER->value]); }
     public function update(User $user,mixed $model): bool { return $this->sameBranch($user,$model); }
     public function delete(User $user,mixed $model): bool { return false; }
