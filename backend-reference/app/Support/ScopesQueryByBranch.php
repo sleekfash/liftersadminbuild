@@ -31,4 +31,17 @@ trait ScopesQueryByBranch
         // Fail closed: a user without a branch assignment sees nothing.
         return $branchId ? $query->where($column, $branchId) : $query->whereRaw('1 = 0');
     }
+
+    /**
+     * Restrict a query to the caller's branch through a relation path, for
+     * tables that have no direct branch_id column (treasury transactions,
+     * reconciliation runs, import batches).
+     */
+    protected function scopeToBranchVia(Builder $query, ?User $user, string $relation, string $column = 'branch_id'): Builder
+    {
+        if ($this->userIsCrossBranch($user)) return $query;
+        $branchId = (int)($user->branch_id ?? 0);
+        if (!$branchId) return $query->whereRaw('1 = 0');
+        return $query->whereHas($relation, fn (Builder $q) => $q->where($column, $branchId));
+    }
 }

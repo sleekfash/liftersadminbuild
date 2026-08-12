@@ -13,5 +13,6 @@ class ReconciliationItem extends Model
         'activated_at'=>'datetime','terminated_at'=>'datetime','closed_at'=>'datetime','locked_at'=>'datetime',
         'completed_at'=>'datetime','resolved_at'=>'datetime','locked_at'=>'datetime','occurred_on'=>'date'
     ];
-
+    public function run(){return $this->belongsTo(ReconciliationRun::class,'reconciliation_run_id');}
+    public function relatedDisbursementRequest(){return $this->belongsTo(DisbursementRequest::class,'related_disbursement_request_id');}
 }

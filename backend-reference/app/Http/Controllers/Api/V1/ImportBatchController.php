@@ -5,14 +5,17 @@ use App\Http\Requests\{PostTrialBalanceImportRequest,StoreImportBatchRequest};
 use App\Http\Resources\ImportBatchResource;
 use App\Models\ImportBatch;
 use App\Services\WorkbookImportService;
+use App\Support\ScopesQueryByBranch;
 use Illuminate\Http\{JsonResponse,Request};
 class ImportBatchController extends Controller
 {
+    use ScopesQueryByBranch;
     public function __construct(private WorkbookImportService $importService) {}
     public function index(Request $request): JsonResponse
     {
         $this->authorize('viewAny', ImportBatch::class);
-        return response()->json(['data'=>ImportBatchResource::collection(ImportBatch::query()->withCount('rows')->latest()->paginate($request->integer('per_page',15)))]);
+        $q=$this->scopeToBranchVia(ImportBatch::query()->withCount('rows'),$request->user(),'uploader');
+        return response()->json(['data'=>ImportBatchResource::collection($q->latest()->paginate($request->integer('per_page',15)))]);
     }
     public function store(StoreImportBatchRequest $request): JsonResponse
     {
