@@ -152,8 +152,9 @@ class BranchHandoverService
             'unposted_import_batches' => ImportBatch::query()->where('branch_id', $branch->id)
                 ->where('status', '!=', 'POSTED')->count(),
             'open_reconciliation_items' => ReconciliationItem::query()
-                ->whereHas('run', fn ($q) => $q->where('branch_id', $branch->id))
-                ->whereNull('resolved_at')->count(),
+                ->whereNull('resolved_at')
+                ->whereHas('relatedDisbursementRequest', fn ($q) => $q->where('branch_id', $branch->id))
+                ->count(),
             'latest_closed_period' => MonthlyPeriod::query()->whereNotNull('closed_at')
                 ->latest('closed_at')->value('id'),
         ];
