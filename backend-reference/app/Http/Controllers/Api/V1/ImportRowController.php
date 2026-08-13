@@ -5,14 +5,16 @@ use App\Http\Requests\StoreImportRowsRequest;
 use App\Http\Resources\ImportRowResource;
 use App\Models\{ImportRow,ImportSheetSnapshot};
 use App\Services\WorkbookImportService;
+use App\Support\ScopesQueryByBranch;
 use Illuminate\Http\{JsonResponse,Request};
 class ImportRowController extends Controller
 {
+    use ScopesQueryByBranch;
     public function __construct(private WorkbookImportService $importService) {}
     public function index(Request $request): JsonResponse
     {
         $this->authorize('viewAny', ImportRow::class);
-        $query=ImportRow::query()->latest();
+        $query=$this->scopeToBranchVia(ImportRow::query()->latest(),$request->user(),'batch.uploader');
         if($request->filled('import_batch_id')) $query->where('import_batch_id',$request->integer('import_batch_id'));
         if($request->filled('status')) $query->where('status',$request->string('status'));
         return response()->json(['data'=>ImportRowResource::collection($query->paginate($request->integer('per_page',15)))]);
