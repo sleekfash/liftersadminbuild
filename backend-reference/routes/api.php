@@ -1,6 +1,6 @@
 <?php
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\V1\{HealthController,AuthController,MemberController,MemberLifecycleController,DisbursementController,DisbursementWorkflowController,ApprovalController,TreasuryPostingController,TreasuryTransactionController,MonthlyPeriodController,PeriodWorkflowController,ReconciliationRunController,ReconciliationItemController,ImportBatchController,ImportSheetSnapshotController,ImportRowController,AuditLogController,UserController,BranchController};
+use App\Http\Controllers\Api\V1\{HealthController,AuthController,MemberController,MemberLifecycleController,DisbursementController,DisbursementWorkflowController,ApprovalController,TreasuryPostingController,TreasuryTransactionController,MonthlyPeriodController,PeriodWorkflowController,ReconciliationRunController,ReconciliationItemController,ImportBatchController,ImportSheetSnapshotController,ImportRowController,AuditLogController,UserController,BranchController,BranchManagerController,BranchHandoverController};
 
 Route::prefix('v1')->group(function () {
     Route::get('/health', HealthController::class);
@@ -9,7 +9,20 @@ Route::prefix('v1')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::apiResource('users', UserController::class)->only(['index']);
-        Route::apiResource('branches', BranchController::class)->only(['index']);
+        Route::apiResource('branches', BranchController::class)->only(['index','show']);
+        // Manager postings move the OFFICER only; branch portfolios stay put.
+        Route::get('/branches/{branch}/assignments', [BranchManagerController::class, 'index']);
+        Route::post('/branches/{branch}/manager', [BranchManagerController::class, 'store']);
+        Route::delete('/branches/{branch}/manager', [BranchManagerController::class, 'destroy']);
+        // Handover / consent workflow between outgoing and incoming officers.
+        Route::get('/branches/{branch}/handovers', [BranchHandoverController::class, 'index']);
+        Route::post('/branches/{branch}/handovers', [BranchHandoverController::class, 'store']);
+        Route::get('/branches/{branch}/handovers/{handover}', [BranchHandoverController::class, 'show']);
+        Route::get('/branches/{branch}/handovers/{handover}/report', [BranchHandoverController::class, 'report']);
+        Route::post('/branches/{branch}/handovers/{handover}/sign-outgoing', [BranchHandoverController::class, 'signOutgoing']);
+        Route::post('/branches/{branch}/handovers/{handover}/acknowledge', [BranchHandoverController::class, 'acknowledge']);
+        Route::post('/branches/{branch}/handovers/{handover}/dispute', [BranchHandoverController::class, 'dispute']);
+        Route::post('/branches/{branch}/handovers/{handover}/approve', [BranchHandoverController::class, 'approve']);
         Route::apiResource('members', MemberController::class);
         Route::patch('/members/{member}/verify', [MemberLifecycleController::class, 'verify']);
         Route::patch('/members/{member}/activate', [MemberLifecycleController::class, 'activate']);
@@ -37,6 +50,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/imports/batches', [ImportBatchController::class, 'store']);
         Route::get('/imports/batches/{batch}', [ImportBatchController::class, 'show']);
         Route::post('/imports/batches/{batch}/sheets', [ImportSheetSnapshotController::class, 'store']);
+        Route::get('/imports/batches/{batch}/sheets/{sheet}', [ImportSheetSnapshotController::class, 'show']);
+        Route::get('/imports/rows/{row}', [ImportRowController::class, 'show']);
         Route::post('/imports/sheets/{sheet}/rows', [ImportRowController::class, 'store']);
         Route::post('/imports/batches/{batch}/map', [ImportBatchController::class, 'map']);
         Route::post('/imports/batches/{batch}/validate', [ImportBatchController::class, 'validateRows']);

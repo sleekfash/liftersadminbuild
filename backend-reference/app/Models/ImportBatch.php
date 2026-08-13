@@ -5,7 +5,7 @@ use Illuminate\Database\Eloquent\Model;
 class ImportBatch extends Model
 {
     use HasFactory;
-    protected $fillable = ['uploaded_by', 'filename', 'status', 'metadata'];
+    protected $fillable = ['uploaded_by', 'branch_id', 'filename', 'status', 'metadata'];
     protected $casts = [
         'metadata'=>'array','details'=>'array','raw_payload'=>'array','mapped_payload'=>'array','errors'=>'array',
         'title_blocks'=>'array','heading_map'=>'array','response_body'=>'array',
@@ -15,4 +15,5 @@ class ImportBatch extends Model
     ];
     public function sheets(){return $this->hasMany(ImportSheetSnapshot::class);} public function rows(){return $this->hasMany(ImportRow::class);}
     public function uploader(){return $this->belongsTo(User::class,'uploaded_by');}
+    public function branch(){return $this->belongsTo(Branch::class);}
 }

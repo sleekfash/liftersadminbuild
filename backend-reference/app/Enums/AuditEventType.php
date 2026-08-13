@@ -14,4 +14,6 @@ enum AuditEventType: string
     case IMPORT = 'IMPORT';
     case OVERRIDE = 'OVERRIDE';
     case BLOCKED_ACTION = 'BLOCKED_ACTION';
+    case ASSIGNMENT = 'ASSIGNMENT';
+    case HANDOVER = 'HANDOVER';
 }
