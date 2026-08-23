@@ -12,7 +12,7 @@
     "format": "prettier --write ."
   },
   "dependencies": {
-    "@cloudflare/vite-plugin": "^1.25.5",
+    "@cloudflare/vite-plugin": "^1.53.1",
     "@hookform/resolvers": "^5.2.2",
     "@lovable.dev/mcp-js": "0.26.2",
     "@radix-ui/react-accordion": "^1.2.12",
@@ -70,7 +70,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
-    "@lovable.dev/vite-tanstack-config": "2.12.0",
+    "@lovable.dev/vite-tanstack-config": "2.13.1",
     "@types/node": "^22.16.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
@@ -94,6 +94,8 @@
     "ip-address": "^10.5.0",
     "hono": "^4.13.1",
     "@hono/node-server": "^2.1.0",
-    "fast-uri": "^4.1.2"
+    "fast-uri": "^4.1.2",
+    "sharp": "^0.35.3",
+    "ws": "^8.21.3"
   }
 }
