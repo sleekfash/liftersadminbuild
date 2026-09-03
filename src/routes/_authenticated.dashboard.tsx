@@ -1,0 +1,5 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { Dashboard, dashboardQuery } from "@/components/Dashboard";
+import { auth } from "@/lib/auth";
+
+export const Route = createFileRoute("/_authenticated/dashboard")({ loader: ({ context }) => { const user = auth.getUser(); if (!user) return null; return context.queryClient.ensureQueryData(dashboardQuery(user)); }, head: () => ({ meta: [{ title: "Overview — Lifter's Touch" }, { name: "description", content: "Operational overview for branches, members, disbursements and reconciliations." }, { property: "og:title", content: "Overview — Lifter's Touch" }, { property: "og:description", content: "Operational overview for branches, members, disbursements and reconciliations." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }), component: Dashboard });

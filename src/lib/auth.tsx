@@ -19,5 +19,5 @@ export const auth = {
 
 export function useAuth() {
   const user = useSyncExternalStore(subscribe, getSnapshot, () => null);
-  return { user, isAuthenticated: Boolean(user && session.getToken()), ...auth };
+  return { user, isAuthenticated: Boolean(user && session.getToken()), login: auth.login, logout: auth.logout, hasRole: auth.hasRole, hasAnyRole: auth.hasAnyRole };
 }
