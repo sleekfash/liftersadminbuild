@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\{StoreUserRequest,UpdateUserRequest};
 use App\Http\Resources\UserResource;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\{JsonResponse,Request};
 use Illuminate\Support\Facades\DB;
