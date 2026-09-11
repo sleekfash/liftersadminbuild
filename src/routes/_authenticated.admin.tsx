@@ -1,0 +1,4 @@
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { AdminPage } from "@/components/Operations";
+import { auth } from "@/lib/auth";
+export const Route = createFileRoute("/_authenticated/admin")({ beforeLoad: () => { const user = auth.getUser(); if (!user?.roles.some((role) => ["SUPER_ADMIN", "SUB_ADMIN"].includes(role))) throw redirect({ to: "/dashboard" }); }, head: () => ({ meta: [{ title: "Administration — Lifter's Touch" }, { name: "description", content: "Set up agency branches, users, roles, and review the audit trail." }, { property: "og:title", content: "Administration — Lifter's Touch" }, { property: "og:description", content: "Set up agency branches, users, roles, and review the audit trail." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }), component: AdminPage });

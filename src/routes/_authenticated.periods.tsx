@@ -1,0 +1,3 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { PeriodsPage } from "@/components/Operations";
+export const Route = createFileRoute("/_authenticated/periods")({ head: () => ({ meta: [{ title: "Periods & Reconciliation — Lifter's Touch" }, { name: "description", content: "Control monthly periods and reconciliation review." }, { property: "og:title", content: "Periods & Reconciliation — Lifter's Touch" }, { property: "og:description", content: "Control monthly periods and reconciliation review." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }), component: PeriodsPage });

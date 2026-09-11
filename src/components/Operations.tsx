@@ -1,23 +1,23 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Check, FilePlus2, Plus, Search, Send, ShieldCheck, UserPlus } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, type ReactNode, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth";
 import { adminData, createBranch, createImport, createMember, createPeriod, createUser, listDisbursements, listImports, listMembers, listPeriods, listTreasury, submitDisbursement } from "@/lib/api/client";
-import type { AdminData, AdminUser, Branch, Disbursement, ImportBatch, Member, MonthlyPeriod, TreasuryTransaction, User } from "@/lib/api/types";
+import type { AdminData, AdminUser, Branch, User } from "@/lib/api/types";
 
 const money = new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 });
 const title = (value: string) => value.replaceAll("_", " ").toLowerCase().replace(/(^|\s)\S/g, (letter) => letter.toUpperCase());
 const statusStyle = (value: string) => value.includes("ACTIVE") || value.includes("PAID") || value.includes("VALIDATED") || value.includes("LOCKED") ? "border-primary/25 bg-primary/5 text-primary" : value.includes("FAILED") || value.includes("SUSPENDED") ? "border-destructive/25 bg-destructive/5 text-destructive" : "border-chart-4/30 bg-chart-4/10 text-chart-4";
 
-function PageHeader({ eyebrow, heading, description, action }: { eyebrow: string; heading: string; description: string; action?: React.ReactNode }) {
+function PageHeader({ eyebrow, heading, description, action }: { eyebrow: string; heading: string; description: string; action?: ReactNode }) {
   return <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">{eyebrow}</p><h1 className="mt-2 font-serif text-4xl font-semibold tracking-tight">{heading}</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">{description}</p></div>{action}</div>;
 }
 
-function TableShell({ children }: { children: React.ReactNode }) { return <div className="overflow-hidden border border-border bg-card"><div className="overflow-x-auto">{children}</div></div>; }
+function TableShell({ children }: { children: ReactNode }) { return <div className="overflow-hidden border border-border bg-card"><div className="overflow-x-auto">{children}</div></div>; }
 function Empty({ message }: { message: string }) { return <div className="px-6 py-12 text-center text-sm text-muted-foreground">{message}</div>; }
 
 export function MembersPage() {

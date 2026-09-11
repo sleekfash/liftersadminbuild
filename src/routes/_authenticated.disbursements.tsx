@@ -1,0 +1,3 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { DisbursementsPage } from "@/components/Operations";
+export const Route = createFileRoute("/_authenticated/disbursements")({ head: () => ({ meta: [{ title: "Disbursements — Lifter's Touch" }, { name: "description", content: "Review and submit controlled disbursement requests." }, { property: "og:title", content: "Disbursements — Lifter's Touch" }, { property: "og:description", content: "Review and submit controlled disbursement requests." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }), component: DisbursementsPage });

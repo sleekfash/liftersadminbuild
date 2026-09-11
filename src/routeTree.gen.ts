@@ -15,8 +15,14 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
+import { Route as AuthenticatedDisbursementsRouteImport } from './routes/_authenticated.disbursements'
+import { Route as AuthenticatedImportsRouteImport } from './routes/_authenticated.imports'
+import { Route as AuthenticatedMembersRouteImport } from './routes/_authenticated.members'
+import { Route as AuthenticatedPeriodsRouteImport } from './routes/_authenticated.periods'
 import { Route as AuthenticatedPlaceholderRouteImport } from './routes/_authenticated.placeholder'
+import { Route as AuthenticatedTreasuryRouteImport } from './routes/_authenticated.treasury'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 
 const IndexRoute = IndexRouteImport.update({
@@ -50,9 +56,35 @@ const Char91DotwellKnownChar93OauthProtectedResourceRoute =
     path: '/.well-known/oauth-protected-resource',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedDisbursementsRoute =
+  AuthenticatedDisbursementsRouteImport.update({
+    id: '/disbursements',
+    path: '/disbursements',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedImportsRoute = AuthenticatedImportsRouteImport.update({
+  id: '/imports',
+  path: '/imports',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedMembersRoute = AuthenticatedMembersRouteImport.update({
+  id: '/members',
+  path: '/members',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedPeriodsRoute = AuthenticatedPeriodsRouteImport.update({
+  id: '/periods',
+  path: '/periods',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedPlaceholderRoute =
@@ -61,6 +93,11 @@ const AuthenticatedPlaceholderRoute =
     path: '/placeholder',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedTreasuryRoute = AuthenticatedTreasuryRouteImport.update({
+  id: '/treasury',
+  path: '/treasury',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
   Char91DotmcpChar93InvokeToolToolRouteImport.update({
     id: '/.mcp/invoke-tool/$tool',
@@ -74,8 +111,14 @@ export interface FileRoutesByFullPath {
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/disbursements': typeof AuthenticatedDisbursementsRoute
+  '/imports': typeof AuthenticatedImportsRoute
+  '/members': typeof AuthenticatedMembersRoute
+  '/periods': typeof AuthenticatedPeriodsRoute
   '/placeholder': typeof AuthenticatedPlaceholderRoute
+  '/treasury': typeof AuthenticatedTreasuryRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
 }
 export interface FileRoutesByTo {
@@ -84,8 +127,14 @@ export interface FileRoutesByTo {
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/disbursements': typeof AuthenticatedDisbursementsRoute
+  '/imports': typeof AuthenticatedImportsRoute
+  '/members': typeof AuthenticatedMembersRoute
+  '/periods': typeof AuthenticatedPeriodsRoute
   '/placeholder': typeof AuthenticatedPlaceholderRoute
+  '/treasury': typeof AuthenticatedTreasuryRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
 }
 export interface FileRoutesById {
@@ -96,8 +145,14 @@ export interface FileRoutesById {
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/disbursements': typeof AuthenticatedDisbursementsRoute
+  '/_authenticated/imports': typeof AuthenticatedImportsRoute
+  '/_authenticated/members': typeof AuthenticatedMembersRoute
+  '/_authenticated/periods': typeof AuthenticatedPeriodsRoute
   '/_authenticated/placeholder': typeof AuthenticatedPlaceholderRoute
+  '/_authenticated/treasury': typeof AuthenticatedTreasuryRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
 }
 export interface FileRouteTypes {
@@ -108,8 +163,14 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/admin'
     | '/dashboard'
+    | '/disbursements'
+    | '/imports'
+    | '/members'
+    | '/periods'
     | '/placeholder'
+    | '/treasury'
     | '/.mcp/invoke-tool/$tool'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -118,8 +179,14 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/admin'
     | '/dashboard'
+    | '/disbursements'
+    | '/imports'
+    | '/members'
+    | '/periods'
     | '/placeholder'
+    | '/treasury'
     | '/.mcp/invoke-tool/$tool'
   id:
     | '__root__'
@@ -129,8 +196,14 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/_authenticated/admin'
     | '/_authenticated/dashboard'
+    | '/_authenticated/disbursements'
+    | '/_authenticated/imports'
+    | '/_authenticated/members'
+    | '/_authenticated/periods'
     | '/_authenticated/placeholder'
+    | '/_authenticated/treasury'
     | '/.mcp/invoke-tool/$tool'
   fileRoutesById: FileRoutesById
 }
@@ -188,6 +261,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -195,11 +275,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/disbursements': {
+      id: '/_authenticated/disbursements'
+      path: '/disbursements'
+      fullPath: '/disbursements'
+      preLoaderRoute: typeof AuthenticatedDisbursementsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/imports': {
+      id: '/_authenticated/imports'
+      path: '/imports'
+      fullPath: '/imports'
+      preLoaderRoute: typeof AuthenticatedImportsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/members': {
+      id: '/_authenticated/members'
+      path: '/members'
+      fullPath: '/members'
+      preLoaderRoute: typeof AuthenticatedMembersRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/periods': {
+      id: '/_authenticated/periods'
+      path: '/periods'
+      fullPath: '/periods'
+      preLoaderRoute: typeof AuthenticatedPeriodsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/placeholder': {
       id: '/_authenticated/placeholder'
       path: '/placeholder'
       fullPath: '/placeholder'
       preLoaderRoute: typeof AuthenticatedPlaceholderRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/treasury': {
+      id: '/_authenticated/treasury'
+      path: '/treasury'
+      fullPath: '/treasury'
+      preLoaderRoute: typeof AuthenticatedTreasuryRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/.mcp/invoke-tool/$tool': {
@@ -213,13 +328,25 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedDisbursementsRoute: typeof AuthenticatedDisbursementsRoute
+  AuthenticatedImportsRoute: typeof AuthenticatedImportsRoute
+  AuthenticatedMembersRoute: typeof AuthenticatedMembersRoute
+  AuthenticatedPeriodsRoute: typeof AuthenticatedPeriodsRoute
   AuthenticatedPlaceholderRoute: typeof AuthenticatedPlaceholderRoute
+  AuthenticatedTreasuryRoute: typeof AuthenticatedTreasuryRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedDisbursementsRoute: AuthenticatedDisbursementsRoute,
+  AuthenticatedImportsRoute: AuthenticatedImportsRoute,
+  AuthenticatedMembersRoute: AuthenticatedMembersRoute,
+  AuthenticatedPeriodsRoute: AuthenticatedPeriodsRoute,
   AuthenticatedPlaceholderRoute: AuthenticatedPlaceholderRoute,
+  AuthenticatedTreasuryRoute: AuthenticatedTreasuryRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
