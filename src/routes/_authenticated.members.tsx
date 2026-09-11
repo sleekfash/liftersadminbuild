@@ -1,0 +1,3 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { MembersPage } from "@/components/Operations";
+export const Route = createFileRoute("/_authenticated/members")({ head: () => ({ meta: [{ title: "Members — Lifter's Touch" }, { name: "description", content: "Manage branch-scoped member records." }, { property: "og:title", content: "Members — Lifter's Touch" }, { property: "og:description", content: "Manage branch-scoped member records." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }), component: MembersPage });

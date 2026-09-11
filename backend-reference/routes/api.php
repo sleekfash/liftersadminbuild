@@ -1,6 +1,6 @@
 <?php
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\V1\{HealthController,AuthController,MemberController,MemberLifecycleController,DisbursementController,DisbursementWorkflowController,ApprovalController,TreasuryPostingController,TreasuryTransactionController,MonthlyPeriodController,PeriodWorkflowController,ReconciliationRunController,ReconciliationItemController,ImportBatchController,ImportSheetSnapshotController,ImportRowController,AuditLogController,UserController,BranchController,BranchManagerController,BranchHandoverController};
+use App\Http\Controllers\Api\V1\{HealthController,AuthController,MemberController,MemberLifecycleController,DisbursementController,DisbursementWorkflowController,ApprovalController,TreasuryPostingController,TreasuryTransactionController,MonthlyPeriodController,PeriodWorkflowController,ReconciliationRunController,ReconciliationItemController,ImportBatchController,ImportSheetSnapshotController,ImportRowController,AuditLogController,UserController,BranchController,BranchManagerController,BranchHandoverController,RoleController};
 
 Route::prefix('v1')->group(function () {
     Route::get('/health', HealthController::class);
@@ -8,8 +8,9 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
-        Route::apiResource('users', UserController::class)->only(['index']);
-        Route::apiResource('branches', BranchController::class)->only(['index','show']);
+        Route::apiResource('users', UserController::class)->only(['index','store','update']);
+        Route::apiResource('branches', BranchController::class)->only(['index','show','store','update']);
+        Route::apiResource('roles', RoleController::class)->only(['index','store']);
         // Manager postings move the OFFICER only; branch portfolios stay put.
         Route::get('/branches/{branch}/assignments', [BranchManagerController::class, 'index']);
         Route::post('/branches/{branch}/manager', [BranchManagerController::class, 'store']);

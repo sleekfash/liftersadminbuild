@@ -1,0 +1,3 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { ImportsPage } from "@/components/Operations";
+export const Route = createFileRoute("/_authenticated/imports")({ head: () => ({ meta: [{ title: "Imports — Lifter's Touch" }, { name: "description", content: "Validate branch-owned import batches before posting." }, { property: "og:title", content: "Imports — Lifter's Touch" }, { property: "og:description", content: "Validate branch-owned import batches before posting." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }), component: ImportsPage });

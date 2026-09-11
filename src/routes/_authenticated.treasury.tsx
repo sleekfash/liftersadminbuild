@@ -1,0 +1,3 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { TreasuryPage } from "@/components/Operations";
+export const Route = createFileRoute("/_authenticated/treasury")({ head: () => ({ meta: [{ title: "Treasury — Lifter's Touch" }, { name: "description", content: "Review treasury movements and branch balances." }, { property: "og:title", content: "Treasury — Lifter's Touch" }, { property: "og:description", content: "Review treasury movements and branch balances." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }), component: TreasuryPage });
