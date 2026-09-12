@@ -1,61 +1,44 @@
-# Admin Panel, Operational Pages & Laravel/MCP Integration
+# Live Admin Login Access
 
 ## Goal
 
-Turn the current auth/dashboard prototype into a usable agency operations console. The frontend will support mock mode for preview work and use the Laravel API when configured. `backend-reference/` is the Laravel source of truth and will receive the missing administration endpoints required by the UI.
+Provide a secure super-admin sign-in for the live Laravel system using `admin@lifterscenter.com`, with a generated temporary password that is shown only once and never placed in frontend code, browser storage, logs, or source control.
 
-## Scope
+## Plan
 
-1. **Shared live API foundation**
-   - Replace ad-hoc requests with one typed client that attaches the bearer token, normalizes Laravel `{data, message, errors}` responses, sends `Idempotency-Key` on mutations, and handles 401/logout consistently.
-   - Keep `VITE_API_MODE=mock` as the default fallback and add a documented environment example for `VITE_API_MODE=live` and `VITE_API_BASE_URL`.
-   - Add `/me` session hydration so a refreshed browser uses the server’s current user, roles, and branch rather than stale local data.
+1. **Confirm live connection and provisioning path**
+   - Configure the live Laravel API base URL for the app’s live mode.
+   - Use the existing protected administration mechanism rather than creating a client-side admin shortcut.
+   - If the live system is not reachable or no provisioning permission is available, stop before creating credentials and report the exact missing prerequisite.
 
-2. **Real operational pages**
-   - Replace the broken “Next” navigation links with protected, role-aware routes and usable list/detail/action screens for:
-     - Members: search/list, create/edit, detail, and permitted lifecycle actions.
-     - Disbursements: filtered queue, detail/approval history, create, submit, branch approval, finance review, authorization, and mark-paid actions according to backend policy and stage.
-     - Treasury: transaction list/detail and links back to the originating disbursement/period.
-     - Periods & reconciliation: period list/detail, run reconciliation, review/close/lock/reopen actions, reconciliation item resolution and override.
-     - Imports: batch list/detail, sheet and row review, map/validate/post/skip workflow, status filters, and branch-safe empty/error states.
-   - Use TanStack Query loaders plus suspense queries, pagination, consistent loading/empty/error states, and route-level role guards rather than relying only on hidden navigation links.
+2. **Create the administrator securely**
+   - Provision `admin@lifterscenter.com` as an active user with the canonical `SUPER_ADMIN` role.
+   - Keep the user unassigned to a branch unless the live agency policy requires an initial branch assignment.
+   - Generate a strong temporary password server-side or through the Laravel deployment process; never hardcode it in the frontend or commit it.
+   - Preserve the backend’s existing behavior of not overwriting an existing administrator password silently.
 
-3. **Administration and first-run setup**
-   - Build an admin workspace with tabs for branches, users, roles, manager postings/handovers, audit activity, and import cross-branch reviewers.
-   - Add Laravel endpoints and policies for real branch creation/update, user list/create/update with branch and role assignment, canonical role listing/management, and audit-log reads. Keep the five existing policy-backed role codes as the authoritative roles; arbitrary custom permission roles are not introduced because current authorization is enum/code based.
-   - Add a secure, one-time first-run initialization flow that creates the first branch and initial super administrator inside a transaction, guarded by a server-side setup secret and disabled after initialization. Keep the existing CLI seeders as the deployment fallback; never expose seed passwords in the browser.
-   - Wire the existing branch manager posting and handover endpoints without moving branch-owned portfolios. Show the frozen handover report, consent status, approval state, and the super-admin-only override path.
+3. **Make first sign-in safe**
+   - Confirm the login response returns the administrator’s role and current account state.
+   - Ensure the live app uses the Laravel token flow, not the preview’s mock account.
+   - Add or document the required password-change step after first sign-in if the Laravel system supports it; do not expose the temporary password again after the initial handoff.
 
-4. **Backend contract hardening**
-   - Add request validation, service transactions, resources, policy checks, and feature tests for the new admin endpoints.
-   - Implement the filters advertised by the MCP/member/disbursement contracts, or remove unsupported filters; do not silently accept no-op query parameters.
-   - Preserve branch isolation and maker-checker rules: authorization decisions come from Laravel policies, not client-provided branch/user fields. Review the current super-admin-only abilities before exposing action buttons.
+4. **Verify access**
+   - Test sign-in with the generated credentials against the live API.
+   - Confirm the administrator reaches the protected dashboard and Administration area.
+   - Confirm non-admin users cannot access administration actions.
+   - Confirm failed credentials do not reveal whether an email exists.
 
-5. **MCP production wiring**
-   - Keep `list_members`, `get_member`, and `submit_disbursement` as real Laravel proxies using the caller’s OAuth bearer token.
-   - Verify the production Laravel URL and OAuth issuer are configured, update the stale MCP authorization documentation, and add contract checks for 401/403/422 propagation, branch scoping, self-approval rejection, and the supported filters.
+## Required before provisioning
 
-## Implementation order
-
-```text
-API client + auth refresh/error handling
-        ↓
-Members → Disbursements → Treasury → Periods/Reconciliation → Imports
-        ↓
-Laravel admin endpoints + secure initialization
-        ↓
-Administration UI + manager handovers/audit views
-        ↓
-MCP contract checks + full verification
-```
+The live Laravel URL and an authorized deployment/admin provisioning path must be available. The current project contains the admin seeder and login route, but the live backend itself cannot be changed from the preview without that connection and permission.
 
 ## Verification
 
-- Confirm all six navigation destinations resolve through generated TanStack routes and direct URL access is role-protected.
-- Run frontend build/lint and exercise mock-mode login, navigation, list/detail views, mutations, and sign-out in the preview.
-- Run Laravel migrations and feature/unit tests locally against SQLite, including new branch/user/role/setup tests and existing branch-scope/import/self-approval tests.
-- With live environment variables configured, verify representative API responses and mutation errors from the browser and MCP tools.
+- Test the live login endpoint and role-bearing response.
+- Test the browser login flow in live mode.
+- Run the frontend production build after any configuration or code changes.
+- Report the generated temporary password only in the secure handoff response, once.
 
 ## Not included
 
-Custom permission-builder roles, MFA, notifications, queued workbook processing, statutory exports, and a full OpenAPI generator remain separate follow-up work; they are not required to deliver this admin panel and operational console.
+Changing the existing role model, moving users between branches, enabling MFA, or creating additional user accounts is outside this access request.
