@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\RoleCode;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\{StoreUserRequest,UpdateUserRequest};
 use App\Http\Resources\UserResource;
@@ -38,7 +39,9 @@ class UserController extends Controller
         $this->authorize('update', $user);
         $updated = DB::transaction(function () use ($request, $user) {
             $data = $request->validated();
-            $roles = $data['roles'] ?? null;
+            $isAdmin = $request->user()?->hasAnyRole([RoleCode::SUPER_ADMIN->value, RoleCode::SUB_ADMIN->value]) ?? false;
+            if (! $isAdmin) unset($data['roles'], $data['branch_id'], $data['is_active']);
+            $roles = $isAdmin ? ($data['roles'] ?? null) : null;
             unset($data['roles']);
             if (array_key_exists('password', $data) && $data['password'] === null) unset($data['password']);
             $user->update($data);
