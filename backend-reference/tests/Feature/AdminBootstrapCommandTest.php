@@ -16,7 +16,7 @@ class AdminBootstrapCommandTest extends TestCase
 
     public function test_bootstrap_creates_hq_admin_and_credentials_sign_in(): void
     {
-        $this->artisan('admin:bootstrap')->assertSuccessful();
+        $this->assertSame(0, Artisan::call('admin:bootstrap'));
 
         $this->assertDatabaseHas('branches', [
             'code' => 'HQ',
@@ -73,6 +73,31 @@ class AdminBootstrapCommandTest extends TestCase
             'id' => $branch->id,
             'name' => 'Existing Office',
             'is_active' => false,
+        ]);
+    }
+
+    public function test_bootstrap_preserves_an_existing_hq_branch(): void
+    {
+        $branch = Branch::query()->create([
+            'code' => 'HQ',
+            'name' => 'Existing Head Office',
+            'address' => 'Existing address',
+            'is_active' => false,
+        ]);
+
+        $this->artisan('admin:bootstrap')->assertSuccessful();
+
+        $this->assertSame(1, Branch::query()->where('code', 'HQ')->count());
+        $this->assertDatabaseHas('branches', [
+            'id' => $branch->id,
+            'name' => 'Existing Head Office',
+            'address' => 'Existing address',
+            'is_active' => false,
+        ]);
+        $this->assertDatabaseHas('users', [
+            'email' => 'admin@lifterscenter.com',
+            'branch_id' => null,
+            'is_active' => true,
         ]);
     }
 
