@@ -8,7 +8,6 @@ use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class AdminBootstrapCommandTest extends TestCase
@@ -75,6 +74,14 @@ class AdminBootstrapCommandTest extends TestCase
             'name' => 'Existing Office',
             'is_active' => false,
         ]);
-        $this->assertFalse(Hash::check('any-new-password', $admin->fresh()->password));
+    }
+
+    public function test_database_seeders_do_not_create_production_administrator_credentials(): void
+    {
+        $this->seed();
+
+        $this->assertDatabaseMissing('users', [
+            'email' => 'admin@lifterscenter.com',
+        ]);
     }
 }
