@@ -41,6 +41,7 @@ export const session = {
 
 export async function login(email: string, password: string) {
   if (isMock) return mockLogin(email, password);
+  if (!apiBase()) throw new Error("Live sign-in is not configured yet. Add the deployed Laravel API address and reload.");
   const response = await fetch(`${apiBase()}/api/v1/login`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ email, password }) }); const payload = await response.json();
   if (!response.ok) throw new Error(payload.message ?? "Unable to sign in.");
   return { token: payload.token, user: normaliseUser(payload.data) };
