@@ -23,6 +23,8 @@ php artisan migrate --seed
 php artisan test
 ```
 
+Database seeding installs reference roles, the HQ branch, and foundation settings. It does not create an administrator. For a production administrator, follow `deployment/ADMIN_BOOTSTRAP.md` and run `php artisan admin:bootstrap` directly on the deployed server.
+
 ## Production Deployment
 
 See:
@@ -45,11 +47,3 @@ php artisan test
 php artisan serve
 ```
 
-## Default Seeded Login
-
-```text
-email: admin@example.com
-password: password
-```
-
-Change this immediately after first login.
