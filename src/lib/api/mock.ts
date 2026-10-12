@@ -1,11 +1,13 @@
 import type { AdminData, AdminUser, Branch, DashboardData, Disbursement, ImportBatch, LoginResponse, Member, MonthlyPeriod, RoleCode, TreasuryTransaction, User } from "./types";
 
 const branches: Branch[] = [
+  { id: 3, name: "Head Office", code: "HQ", address: "Head Office" },
   { id: 1, name: "Lagos Central", code: "LAG-01", address: "12 Marina Road, Lagos" },
   { id: 2, name: "Ibadan North", code: "IBA-02", address: "4 Mokola Hill, Ibadan" },
 ];
 
 const users: Array<User & { password: string }> = [
+  { id: 5, name: "Agency Administrator", email: "admin@lifterscenter.com", roles: ["SUPER_ADMIN"], branch: null, password: "password" },
   { id: 1, name: "Amaka Okafor", email: "admin@example.com", roles: ["SUPER_ADMIN"], branch: null, password: "password" },
   { id: 2, name: "Tunde Balogun", email: "finance@example.com", roles: ["FINANCE_OFFICER"], branch: null, password: "password" },
   { id: 3, name: "Adaeze Nwosu", email: "manager.lagos@example.com", roles: ["BRANCH_MANAGER"], branch: branches[0], password: "password" },
@@ -79,8 +81,8 @@ export const mockListTreasury = async (user: User): Promise<TreasuryTransaction[
 export const mockListPeriods = async (): Promise<MonthlyPeriod[]> => { await delay(); return periods; };
 export const mockListImports = async (user: User): Promise<ImportBatch[]> => { await delay(); return visible(imports, user); };
 export const mockAdminData = async (): Promise<AdminData> => { await delay(); return { branches: [...branches], users: users.map(toUser).map((user) => ({ ...user, isActive: true })), roles: [{ id: 1, name: "Super Admin", code: "SUPER_ADMIN", description: "Full agency administration" }, { id: 2, name: "Sub Admin", code: "SUB_ADMIN", description: "Operational administration" }, { id: 3, name: "Finance Officer", code: "FINANCE_OFFICER", description: "Finance and treasury workflows" }, { id: 4, name: "Branch Manager", code: "BRANCH_MANAGER", description: "Branch operations" }, { id: 5, name: "Auditor", code: "AUDITOR", description: "Read-only assurance" }], auditLogs: [{ id: 1, eventType: "CREATE", summary: "August import batch created", actorId: 2, createdAt: "12 minutes ago" }, { id: 2, eventType: "ASSIGNMENT", summary: "Lagos Central manager posted", actorId: 1, createdAt: "Yesterday" }] }; };
-export const mockCreateBranch = async (data: Omit<Branch, "id">): Promise<Branch> => { await delay(); const branch = { ...data, id: branches.length + 1 }; branches.push(branch); return branch; };
-export const mockCreateUser = async (data: { name: string; email: string; password: string; branchId: number | null; role: RoleCode }): Promise<AdminUser> => { await delay(); const branch = branches.find((item) => item.id === data.branchId) ?? null; const user: AdminUser = { id: users.length + 1, name: data.name, email: data.email, roles: [data.role], branch, isActive: true }; users.push({ ...user, password: data.password }); return user; };
+export const mockCreateBranch = async (data: Omit<Branch, "id">): Promise<Branch> => { await delay(); const branch = { ...data, id: Math.max(...branches.map((b) => b.id)) + 1 }; branches.push(branch); return branch; };
+export const mockCreateUser = async (data: { name: string; email: string; password: string; branchId: number | null; role: RoleCode }): Promise<AdminUser> => { await delay(); const branch = branches.find((item) => item.id === data.branchId) ?? null; const user: AdminUser = { id: Math.max(...users.map((u) => u.id)) + 1, name: data.name, email: data.email, roles: [data.role], branch, isActive: true }; users.push({ ...user, password: data.password }); return user; };
 export const mockCreatePeriod = async (data: Omit<MonthlyPeriod, "id" | "status">): Promise<MonthlyPeriod> => { await delay(); const period = { ...data, id: periods.length + 1, status: "OPEN" as const }; periods.unshift(period); return period; };
 export const mockCreateImport = async (data: { filename: string; branchId: number }): Promise<ImportBatch> => { await delay(); const batch = { ...data, id: imports.length + 1, status: "UPLOADED" as const, rowsCount: 0, createdAt: "Just now" }; imports.unshift(batch); return batch; };
 export const mockSubmitDisbursement = async (id: number): Promise<Disbursement> => { await delay(); const item = disbursements.find((candidate) => candidate.id === id); if (!item) throw new Error("Disbursement not found."); item.stage = "SUBMITTED"; return item; };
