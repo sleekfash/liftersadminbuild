@@ -10,7 +10,7 @@ const users: Array<User & { password: string }> = [
   { id: 5, name: "Agency Administrator", email: "admin@lifterscenter.com", roles: ["SUPER_ADMIN"], branch: null, password: "password" },
   { id: 1, name: "Amaka Okafor", email: "admin@example.com", roles: ["SUPER_ADMIN"], branch: null, password: "password" },
   { id: 2, name: "Tunde Balogun", email: "finance@example.com", roles: ["FINANCE_OFFICER"], branch: null, password: "password" },
-  { id: 3, name: "Adaeze Nwosu", email: "manager.lagos@example.com", roles: ["BRANCH_MANAGER"], branch: branches[0], password: "password" },
+  { id: 3, name: "Adaeze Nwosu", email: "manager.lagos@example.com", roles: ["BRANCH_MANAGER"], branch: branches[1], password: "password" },
   { id: 4, name: "Chinedu Eze", email: "auditor@example.com", roles: ["AUDITOR"], branch: null, password: "password" },
 ];
 
