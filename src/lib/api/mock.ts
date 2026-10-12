@@ -85,6 +85,18 @@ export const mockCreateBranch = async (data: Omit<Branch, "id">): Promise<Branch
 export const mockCreateUser = async (data: { name: string; email: string; password: string; branchId: number | null; role: RoleCode }): Promise<AdminUser> => { await delay(); const branch = branches.find((item) => item.id === data.branchId) ?? null; const user: AdminUser = { id: Math.max(...users.map((u) => u.id)) + 1, name: data.name, email: data.email, roles: [data.role], branch, isActive: true }; users.push({ ...user, password: data.password }); return user; };
 export const mockCreatePeriod = async (data: Omit<MonthlyPeriod, "id" | "status">): Promise<MonthlyPeriod> => { await delay(); const period = { ...data, id: periods.length + 1, status: "OPEN" as const }; periods.unshift(period); return period; };
 export const mockCreateImport = async (data: { filename: string; branchId: number }): Promise<ImportBatch> => { await delay(); const batch = { ...data, id: imports.length + 1, status: "UPLOADED" as const, rowsCount: 0, createdAt: "Just now" }; imports.unshift(batch); return batch; };
-export const mockSubmitDisbursement = async (id: number): Promise<Disbursement> => { await delay(); const item = disbursements.find((candidate) => candidate.id === id); if (!item) throw new Error("Disbursement not found."); item.stage = "SUBMITTED"; return item; };
+export const mockSubmitDisbursement = async (id: number): Promise<Disbursement> => mockTransitionDisbursement(id, "DRAFT", "SUBMITTED");
+export const mockTransitionDisbursement = async (id: number, from: Disbursement["stage"], to: Disbursement["stage"]): Promise<Disbursement> => { await delay(); const item = disbursements.find((candidate) => candidate.id === id); if (!item) throw new Error("Disbursement not found."); if (item.stage !== from) throw new Error(`This request is already ${item.stage.replaceAll("_", " ").toLowerCase()}.`); item.stage = to; return { ...item }; };
+export const mockCreateDisbursement = async (data: { memberId: number; amount: number; purpose: string }, actor: User): Promise<Disbursement> => {
+  await delay();
+  const member = members.find((item) => item.id === data.memberId);
+  if (!member) throw new Error("Please choose a member.");
+  if (actor.branch && actor.branch.id !== member.branchId) throw new Error("You may only create requests for members in your own branch.");
+  if (!(data.amount >= 1)) throw new Error("Amount must be at least ₦1.");
+  const id = Math.max(0, ...disbursements.map((item) => item.id)) + 1;
+  const item: Disbursement = { id, reference: `DSB-2026-${String(41 + id).padStart(4, "0")}`, memberName: member.name, amount: data.amount, stage: "DRAFT", branchId: member.branchId, submittedAt: "Just now", requestedBy: actor.id, purpose: data.purpose };
+  disbursements.unshift(item);
+  return { ...item };
+};
 
 export const roleLabel = (role: RoleCode) => role.replaceAll("_", " ").toLowerCase().replace(/(^|\s)\S/g, (letter) => letter.toUpperCase());

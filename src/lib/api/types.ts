@@ -46,7 +46,10 @@ export interface Disbursement {
   stage: DisbursementStage;
   branchId: number;
   submittedAt: string;
+  requestedBy?: number;
+  purpose?: string;
 }
+export type DisbursementAction = "submit" | "branchApprove" | "financeReview" | "authorize" | "markPaid";
 
 export interface TreasuryTransaction {
   id: number;
