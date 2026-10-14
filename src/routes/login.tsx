@@ -33,8 +33,9 @@ function safeInternalRedirect(value: unknown): string {
   }
 
   try {
-    const target = new URL(value, window.location.origin);
-    if (target.origin !== window.location.origin) return "/dashboard";
+    const appOrigin = "https://lifters-touch.invalid";
+    const target = new URL(value, appOrigin);
+    if (target.origin !== appOrigin) return "/dashboard";
     return `${target.pathname}${target.search}${target.hash}`;
   } catch {
     return "/dashboard";
