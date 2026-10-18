@@ -1,2 +1,3 @@
 - [x] Prepare secure production setup for the first HQ branch and `admin@lifterscenter.com`.
 - [ ] Provision the live administrator and verify sign-in — blocked on a live Laravel API URL and running the setup on the authorized deployment host.
+- [ ] Add Branch Manager review drawer, matching Laravel/mock decisions and validation tests.
