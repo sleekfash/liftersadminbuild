@@ -34,6 +34,7 @@ export interface Member {
   id: number;
   name: string;
   memberNumber: string;
+  phone?: string;
   status: MemberStatus;
   branchId: number;
 }

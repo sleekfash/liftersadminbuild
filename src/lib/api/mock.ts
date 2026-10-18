@@ -1,4 +1,5 @@
-import type { AdminData, AdminUser, Branch, DashboardData, Disbursement, ImportBatch, LoginResponse, Member, MonthlyPeriod, RoleCode, TreasuryTransaction, User } from "./types";
+import { branchReviewError, validateBranchReview } from "../disbursement-workflow";
+import type { BranchReviewInput, AdminData, AdminUser, Branch, DashboardData, Disbursement, ImportBatch, LoginResponse, Member, MonthlyPeriod, RoleCode, TreasuryTransaction, User } from "./types";
 
 const branches: Branch[] = [
   { id: 3, name: "Head Office", code: "HQ", address: "Head Office" },
@@ -24,7 +25,7 @@ const members: Member[] = [
 ];
 
 const disbursements: Disbursement[] = [
-  { id: 1, reference: "DSB-2026-0041", memberName: "Grace Adebayo", amount: 850000, stage: "SUBMITTED", branchId: 1, submittedAt: "Today, 09:42" },
+  { id: 1, reference: "DSB-2026-0041", memberName: "Grace Adebayo", amount: 850000, stage: "SUBMITTED", branchId: 1, submittedAt: "2026-10-18T09:42:00Z", memberId: 1, requestedBy: 2, requesterName: "Tunde Balogun", purpose: "School fees support", category: "Education", timeline: [{ stage: "SUBMITTED", at: "2026-10-18T09:42:00Z", actorId: 2, actorName: "Tunde Balogun" }] },
   { id: 2, reference: "DSB-2026-0039", memberName: "Michael Okoro", amount: 420000, stage: "BRANCH_APPROVED", branchId: 1, submittedAt: "Yesterday, 16:18" },
   { id: 3, reference: "DSB-2026-0038", memberName: "Sarah Yusuf", amount: 1200000, stage: "FINANCE_REVIEW", branchId: 2, submittedAt: "Yesterday, 14:06" },
   { id: 4, reference: "DSB-2026-0036", memberName: "Ibrahim Musa", amount: 300000, stage: "AUTHORIZED", branchId: 2, submittedAt: "19 Aug, 11:20" },
@@ -45,6 +46,10 @@ const imports: ImportBatch[] = [
 
 const delay = (ms = 120) => new Promise((resolve) => setTimeout(resolve, ms));
 const visible = <T extends { branchId: number }>(items: T[], user: User) => user.branch ? items.filter((item) => item.branchId === user.branch?.id) : items;
+const enrichDisbursement = (item: Disbursement): Disbursement => {
+  const member = members.find((m) => m.id === item.memberId || m.name === item.memberName);
+  return { ...item, umid: member?.memberNumber, verificationStatus: member?.status, phone: member?.phone, requesterName: item.requesterName ?? users.find((u) => u.id === item.requestedBy)?.name, timeline: item.timeline?.map((stamp) => ({ ...stamp })) };
+};
 const toUser = (user: User & { password?: string }): User => { const { password: _password, ...safe } = user; return safe; };
 
 export const mockLogin = async (email: string, password: string): Promise<LoginResponse> => {
@@ -76,7 +81,7 @@ export const mockDashboard = async (user: User): Promise<DashboardData> => {
 };
 
 export const mockListMembers = async (user: User, search = ""): Promise<Member[]> => { await delay(); const term = search.trim().toLowerCase(); return visible(members, user).filter((item) => !term || `${item.name} ${item.memberNumber}`.toLowerCase().includes(term)); };
-export const mockListDisbursements = async (user: User): Promise<Disbursement[]> => { await delay(); return visible(disbursements, user); };
+export const mockListDisbursements = async (user: User): Promise<Disbursement[]> => { await delay(); return visible(disbursements, user).map(enrichDisbursement); };
 export const mockListTreasury = async (user: User): Promise<TreasuryTransaction[]> => { await delay(); return user.branch ? treasury.filter((item) => item.disbursementId === undefined || disbursements.find((d) => d.id === item.disbursementId)?.branchId === user.branch?.id) : treasury; };
 export const mockListPeriods = async (): Promise<MonthlyPeriod[]> => { await delay(); return periods; };
 export const mockListImports = async (user: User): Promise<ImportBatch[]> => { await delay(); return visible(imports, user); };
@@ -86,7 +91,7 @@ export const mockCreateUser = async (data: { name: string; email: string; passwo
 export const mockCreatePeriod = async (data: Omit<MonthlyPeriod, "id" | "status">): Promise<MonthlyPeriod> => { await delay(); const period = { ...data, id: periods.length + 1, status: "OPEN" as const }; periods.unshift(period); return period; };
 export const mockCreateImport = async (data: { filename: string; branchId: number }): Promise<ImportBatch> => { await delay(); const batch = { ...data, id: imports.length + 1, status: "UPLOADED" as const, rowsCount: 0, createdAt: "Just now" }; imports.unshift(batch); return batch; };
 export const mockSubmitDisbursement = async (id: number): Promise<Disbursement> => mockTransitionDisbursement(id, "DRAFT", "SUBMITTED");
-export const mockTransitionDisbursement = async (id: number, from: Disbursement["stage"], to: Disbursement["stage"]): Promise<Disbursement> => { await delay(); const item = disbursements.find((candidate) => candidate.id === id); if (!item) throw new Error("Disbursement not found."); if (item.stage !== from) throw new Error(`This request is already ${item.stage.replaceAll("_", " ").toLowerCase()}.`); item.stage = to; return { ...item }; };
+export const mockTransitionDisbursement = async (id: number, from: Disbursement["stage"], to: Disbursement["stage"]): Promise<Disbursement> => { await delay(); const item = disbursements.find((candidate) => candidate.id === id); if (!item) throw new Error("Disbursement not found."); if (item.stage !== from) throw new Error(`This request is already ${item.stage.replaceAll("_", " ").toLowerCase()}.`); item.stage = to; const at = new Date().toISOString(); if (to === "SUBMITTED") item.submittedAt = at; item.timeline = [...(item.timeline ?? []), { stage: to, at, actorId: to === "SUBMITTED" ? item.requestedBy : undefined, actorName: to === "SUBMITTED" ? item.requesterName : undefined }]; return enrichDisbursement(item); };
 export const mockCreateDisbursement = async (data: { memberId: number; amount: number; purpose: string }, actor: User): Promise<Disbursement> => {
   await delay();
   const member = members.find((item) => item.id === data.memberId);
@@ -94,9 +99,27 @@ export const mockCreateDisbursement = async (data: { memberId: number; amount: n
   if (actor.branch && actor.branch.id !== member.branchId) throw new Error("You may only create requests for members in your own branch.");
   if (!(data.amount >= 1)) throw new Error("Amount must be at least ₦1.");
   const id = Math.max(0, ...disbursements.map((item) => item.id)) + 1;
-  const item: Disbursement = { id, reference: `DSB-2026-${String(41 + id).padStart(4, "0")}`, memberName: member.name, amount: data.amount, stage: "DRAFT", branchId: member.branchId, submittedAt: "Just now", requestedBy: actor.id, purpose: data.purpose };
+  const item: Disbursement = { id, reference: `DSB-2026-${String(41 + id).padStart(4, "0")}`, memberName: member.name, amount: data.amount, stage: "DRAFT", branchId: member.branchId, submittedAt: "", requestedBy: actor.id, requesterName: actor.name, memberId: member.id, purpose: data.purpose, timeline: [] };
   disbursements.unshift(item);
   return { ...item };
+};
+
+export const mockGetDisbursement = async (id: number, actor: User): Promise<Disbursement> => {
+  await delay();
+  const item = visible(disbursements, actor).find((candidate) => candidate.id === id);
+  if (!item) throw new Error("Disbursement not found.");
+  return enrichDisbursement(item);
+};
+export const mockReviewDisbursement = async (id: number, input: BranchReviewInput, actor: User): Promise<Disbursement> => {
+  await delay();
+  const item = disbursements.find((candidate) => candidate.id === id);
+  if (!item) throw new Error("Disbursement not found.");
+  const error = branchReviewError(actor, item) ?? validateBranchReview(input);
+  if (error) throw new Error(error);
+  item.stage = input.decision === "approve" ? "BRANCH_APPROVED" : "REJECTED";
+  if (input.decision === "reject") { item.rejectionCategory = input.category; item.rejectedReason = input.reason?.trim(); }
+  item.timeline = [...(item.timeline ?? []), { stage: item.stage, at: new Date().toISOString(), actorId: actor.id, actorName: actor.name, remarks: input.decision === "approve" ? input.remarks : item.rejectedReason }];
+  return enrichDisbursement(item);
 };
 
 export const roleLabel = (role: RoleCode) => role.replaceAll("_", " ").toLowerCase().replace(/(^|\s)\S/g, (letter) => letter.toUpperCase());
