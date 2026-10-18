@@ -4,7 +4,7 @@ use App\Enums\RoleCode; use App\Models\User; use App\Policies\Concerns\ScopesByB
 class DisbursementRequestPolicy
 {
     use ScopesByBranch;
-    public function before(User $user,string $ability): ?bool { return $user->hasRole(RoleCode::SUPER_ADMIN->value) ? true : null; }
+    public function before(User $user,string $ability): ?bool { if (in_array($ability, ['branchApprove','branchReject'], true)) return null; return $user->hasRole(RoleCode::SUPER_ADMIN->value) ? true : null; }
     public function viewAny(User $user): bool { return $this->canList($user); }
     public function view(User $user,mixed $model): bool { return $this->sameBranch($user,$model); }
     public function create(User $user): bool { return $user->hasAnyRole([RoleCode::SUB_ADMIN->value,RoleCode::BRANCH_MANAGER->value,RoleCode::FINANCE_OFFICER->value]); }
@@ -16,7 +16,8 @@ class DisbursementRequestPolicy
     public function reactivate(User $user,mixed $model): bool { return false; }
     public function terminate(User $user,mixed $model): bool { return false; }
     public function submit(User $user,mixed $model): bool { return $this->sameBranch($user,$model) && (int)($model->requested_by ?? 0) === (int)$user->id; }
-    public function branchApprove(User $user,mixed $model): bool { return $user->hasRole(RoleCode::BRANCH_MANAGER->value) && $this->sameBranch($user,$model) && (int)($model->requested_by ?? 0) !== (int)$user->id; }
+    public function branchApprove(User $user,mixed $model): bool { return ($model->stage ?? null) === 'SUBMITTED' && (int)($model->requested_by ?? 0) > 0 && (int)$model->requested_by !== (int)$user->id && ($user->hasRole(RoleCode::SUPER_ADMIN->value) || ($user->hasRole(RoleCode::BRANCH_MANAGER->value) && (int)($user->branch_id ?? 0) > 0 && (int)$user->branch_id === (int)($model->branch_id ?? 0)));  }
+    public function branchReject(User $user,mixed $model): bool { return $this->branchApprove($user,$model); }
     public function financeReview(User $user,mixed $model): bool { return $user->hasRole(RoleCode::FINANCE_OFFICER->value) && $this->sameBranch($user,$model); }
     public function authorize(User $user,mixed $model): bool { return false; }
     public function markPaid(User $user,mixed $model): bool { return $user->hasRole(RoleCode::FINANCE_OFFICER->value) && $this->sameBranch($user,$model); }

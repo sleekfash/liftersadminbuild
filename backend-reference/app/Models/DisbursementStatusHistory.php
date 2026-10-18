@@ -5,6 +5,7 @@ use Illuminate\Database\Eloquent\Model;
 class DisbursementStatusHistory extends Model
 {
     use HasFactory;
+    public function actor(){return $this->belongsTo(User::class, 'changed_by');}
     protected $fillable = ['disbursement_request_id', 'from_stage', 'to_stage', 'reason', 'changed_by'];
     protected $casts = [
         'metadata'=>'array','details'=>'array','raw_payload'=>'array','mapped_payload'=>'array','errors'=>'array',

@@ -5,7 +5,7 @@ class DisbursementController extends Controller
 {
     use ScopesQueryByBranch;
     public function __construct(private DisbursementService $service) {}
-    public function index(Request $r): JsonResponse{$this->authorize('viewAny',DisbursementRequest::class);return response()->json(['data'=>DisbursementRequestResource::collection($this->scopeToBranch(DisbursementRequest::with(['member','approvals']),$r->user())->latest()->paginate($r->integer('per_page',15)))]);}
+    public function index(Request $r): JsonResponse{$this->authorize('viewAny',DisbursementRequest::class);return response()->json(['data'=>DisbursementRequestResource::collection($this->scopeToBranch(DisbursementRequest::with(['member','requester','approvals','statusHistories.actor']),$r->user())->latest()->paginate($r->integer('per_page',15)))]);}
     public function store(StoreDisbursementRequest $r): JsonResponse{$this->authorize('create',DisbursementRequest::class);$d=$this->service->create($r->validated(),$r->user());return response()->json(['message'=>'Disbursement draft created successfully.','data'=>new DisbursementRequestResource($d)],201);}
-    public function show(DisbursementRequest $disbursement): JsonResponse{$this->authorize('view',$disbursement);return response()->json(['data'=>new DisbursementRequestResource($disbursement->load(['member','approvals','statusHistories','treasuryTransactions']))]);}
+    public function show(DisbursementRequest $disbursement): JsonResponse{$this->authorize('view',$disbursement);return response()->json(['data'=>new DisbursementRequestResource($disbursement->load(['member','requester','approvals','statusHistories.actor','treasuryTransactions']))]);}
 }
