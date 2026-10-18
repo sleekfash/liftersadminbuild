@@ -33,6 +33,7 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('disbursements', DisbursementController::class)->only(['index','store','show']);
         Route::post('/disbursements/{disbursement}/submit', [DisbursementWorkflowController::class, 'submit']);
         Route::post('/disbursements/{disbursement}/approve/branch', [ApprovalController::class, 'branchApprove']);
+        Route::post('/disbursements/{disbursement}/reject/branch', [ApprovalController::class, 'branchReject']);
         Route::post('/disbursements/{disbursement}/approve/finance', [ApprovalController::class, 'financeReview']);
         Route::post('/disbursements/{disbursement}/authorize', [ApprovalController::class, 'authorizeDisbursement']);
         Route::post('/disbursements/{disbursement}/mark-paid', [TreasuryPostingController::class, 'markPaid']);

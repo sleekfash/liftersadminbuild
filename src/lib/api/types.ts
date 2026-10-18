@@ -6,7 +6,7 @@ export type RoleCode =
   | "AUDITOR";
 
 export type MemberStatus = "PENDING" | "VERIFIED" | "ACTIVE" | "SUSPENDED" | "TERMINATED";
-export type DisbursementStage = "DRAFT" | "SUBMITTED" | "BRANCH_APPROVED" | "FINANCE_REVIEW" | "AUTHORIZED" | "PAID";
+export type DisbursementStage = "DRAFT" | "SUBMITTED" | "BRANCH_APPROVED" | "FINANCE_REVIEW" | "AUTHORIZED" | "PAID" | "REJECTED";
 export type PeriodStatus = "OPEN" | "REVIEW" | "CLOSED" | "LOCKED";
 export type ImportStatus = "UPLOADED" | "MAPPED" | "VALIDATED" | "POSTED" | "FAILED";
 
@@ -34,8 +34,24 @@ export interface Member {
   id: number;
   name: string;
   memberNumber: string;
+  phone?: string;
   status: MemberStatus;
   branchId: number;
+}
+
+export interface ReviewStamp {
+  stage: DisbursementStage;
+  at: string;
+  actorId?: number;
+  actorName?: string;
+  remarks?: string;
+}
+export type RejectionCategory = "INCOMPLETE_DOCUMENTATION" | "MEMBER_ELIGIBILITY" | "AMOUNT_PURPOSE_MISMATCH" | "DUPLICATE_REQUEST" | "OTHER";
+export interface BranchReviewInput {
+  decision: "approve" | "reject";
+  remarks?: string;
+  category?: RejectionCategory;
+  reason?: string;
 }
 
 export interface Disbursement {
@@ -48,6 +64,15 @@ export interface Disbursement {
   submittedAt: string;
   requestedBy?: number;
   purpose?: string;
+  memberId?: number;
+  umid?: string;
+  phone?: string;
+  verificationStatus?: MemberStatus;
+  requesterName?: string;
+  category?: string;
+  rejectionCategory?: RejectionCategory;
+  rejectedReason?: string;
+  timeline?: ReviewStamp[];
 }
 export type DisbursementAction = "submit" | "branchApprove" | "financeReview" | "authorize" | "markPaid";
 
