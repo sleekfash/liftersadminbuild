@@ -169,6 +169,39 @@ export interface BranchHandover {
   createdAt?: string;
 }
 
+export interface DailyRegister {
+  id: number;
+  branchId: number;
+  branchName: string;
+  registerDate: string;
+  status: RegisterStatus;
+  cashBookOpening: number;
+  totalCollections: number;
+  totalDisbursements: number;
+  monitoringCash: number;
+  expectedPhysicalCash: number;
+  physicalCashCounted: number;
+  variance: number;
+  denominations?: CashDenominations | null;
+  varianceCategory?: VarianceCategory | null;
+  varianceReason?: string | null;
+  varianceApprovedBy?: string | null;
+  closedBy?: string | null;
+  closedAt?: string | null;
+  lockedAt?: string | null;
+}
+
+export interface SaveRegisterCountInput {
+  registerId: number;
+  denominations: CashDenominations;
+}
+
+export interface ResolveVarianceInput {
+  registerId: number;
+  category: VarianceCategory;
+  reason: string;
+}
+
 export interface ApiPage<T> {
   data: T[];
   meta?: { current_page?: number; last_page?: number; per_page?: number; total?: number };
