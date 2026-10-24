@@ -1,6 +1,7 @@
-import { mockGetDisbursement, mockReviewDisbursement, mockAdminData, mockCreateBranch, mockCreateDisbursement, mockCreateImport, mockCreatePeriod, mockCreateUser, mockDashboard, mockListDisbursements, mockListImports, mockListMembers, mockListPeriods, mockListTreasury, mockLogin, mockSubmitDisbursement, mockTransitionDisbursement } from "./mock";
+import { mockGetDailyRegister, mockGetDisbursement, mockLockRegister, mockResolveVariance, mockReviewDisbursement, mockAdminData, mockCreateBranch, mockCreateDisbursement, mockCreateImport, mockCreatePeriod, mockCreateUser, mockDashboard, mockGetDailyRegisters as mockListDailyRegisters, mockListDisbursements, mockListImports, mockListMembers, mockListPeriods, mockListTreasury, mockLogin, mockSaveRegisterCount, mockSubmitDisbursement, mockTransitionDisbursement } from "./mock";
 import { branchReviewError, validateBranchReview, transitions } from "../disbursement-workflow";
-import type { BranchReviewInput, ReviewStamp, AdminData, AdminUser, Branch, DashboardData, Disbursement, DisbursementAction, ImportBatch, LoginResponse, Member, MonthlyPeriod, RoleCode, TreasuryTransaction, User } from "./types";
+import { canResolveVariance, lockRegisterError, resolveVarianceError, validateVarianceResolution } from "../register-workflow";
+import type { BranchReviewInput, ReviewStamp, AdminData, AdminUser, Branch, CashDenominations, DailyRegister, DashboardData, Disbursement, DisbursementAction, ImportBatch, LoginResponse, Member, MonthlyPeriod, RegisterStatus, ResolveVarianceInput, RoleCode, SaveRegisterCountInput, TreasuryTransaction, User } from "./types";
 
 const TOKEN_KEY = "lifters-touch-token";
 const USER_KEY = "lifters-touch-user";
@@ -94,4 +95,62 @@ export async function reviewDisbursement(id: number, input: BranchReviewInput): 
   if (error) throw new Error(error);
   if (isMock) return mockReviewDisbursement(id, input, actor);
   return mapDisbursement(await request<Record<string, unknown>>("POST", `/disbursements/${id}/${input.decision === "approve" ? "approve/branch" : "reject/branch"}`, input.decision === "approve" ? { remarks: input.remarks ?? "" } : { category: input.category, reason: input.reason?.trim() }));
+}
+
+// ---- Daily branch cash register & till reconciliation ----
+const mapRegister = (raw: Record<string, unknown>): DailyRegister => ({
+  id: Number(raw.id),
+  branchId: Number(raw.branchId ?? raw.branch_id ?? 0),
+  branchName: String(raw.branchName ?? (raw.branch as Record<string, unknown> | undefined)?.name ?? ""),
+  registerDate: String(raw.registerDate ?? raw.register_date ?? ""),
+  status: String(raw.status ?? "OPEN").toUpperCase() as RegisterStatus,
+  cashBookOpening: Number(raw.cashBookOpening ?? raw.cash_book_opening ?? 0),
+  totalCollections: Number(raw.totalCollections ?? raw.total_collections ?? 0),
+  totalDisbursements: Number(raw.totalDisbursements ?? raw.total_disbursements ?? 0),
+  monitoringCash: Number(raw.monitoringCash ?? raw.monitoring_cash ?? 0),
+  expectedPhysicalCash: Number(raw.expectedPhysicalCash ?? raw.expected_physical_cash ?? 0),
+  physicalCashCounted: Number(raw.physicalCashCounted ?? raw.physical_cash_counted ?? 0),
+  variance: Number(raw.variance ?? 0),
+  denominations: (raw.denominations as CashDenominations | null | undefined) ?? null,
+  varianceCategory: (raw.varianceCategory ?? raw.variance_category) as DailyRegister["varianceCategory"],
+  varianceReason: raw.varianceReason ? String(raw.varianceReason) : raw.variance_reason ? String(raw.variance_reason) : null,
+  varianceApprovedBy: raw.varianceApprovedBy ? String(raw.varianceApprovedBy) : raw.variance_approved_by ? String(raw.variance_approved_by) : null,
+  closedBy: raw.closedBy ? String(raw.closedBy) : raw.closed_by ? String(raw.closed_by) : null,
+  closedAt: raw.closedAt ? String(raw.closedAt) : raw.closed_at ? String(raw.closed_at) : null,
+  lockedAt: raw.lockedAt ? String(raw.lockedAt) : raw.locked_at ? String(raw.locked_at) : null,
+});
+
+export async function listDailyRegisters(user: User, branchId?: number, date?: string): Promise<DailyRegister[]> {
+  if (isMock) return mockListDailyRegisters(user, branchId, date);
+  return unwrapList(await request<unknown>("GET", "/registers", undefined, { branch_id: branchId, date })).map(mapRegister);
+}
+export async function getDailyRegister(id: number): Promise<DailyRegister> {
+  const actor = session.getUser();
+  if (!actor) throw new Error("Please sign in again.");
+  if (isMock) return mockGetDailyRegister(id, actor);
+  return mapRegister(await request<Record<string, unknown>>("GET", `/registers/${id}`));
+}
+export async function saveRegisterCount(input: SaveRegisterCountInput): Promise<DailyRegister> {
+  const actor = session.getUser();
+  if (!actor) throw new Error("Please sign in again.");
+  if (isMock) return mockSaveRegisterCount(actor, input);
+  return mapRegister(await request<Record<string, unknown>>("POST", `/registers/${input.registerId}/count`, { denominations: input.denominations }));
+}
+export async function resolveVariance(input: ResolveVarianceInput): Promise<DailyRegister> {
+  const actor = session.getUser();
+  if (!actor) throw new Error("Please sign in again.");
+  const register = await getDailyRegister(input.registerId);
+  const error = (canResolveVariance(actor, register) ? null : "A branch manager or administrator of this branch must authorise the variance.") ?? resolveVarianceError(actor, register) ?? validateVarianceResolution(input);
+  if (error) throw new Error(error);
+  if (isMock) return mockResolveVariance(actor, input);
+  return mapRegister(await request<Record<string, unknown>>("POST", `/registers/${input.registerId}/variance/resolve`, { category: input.category, reason: input.reason.trim() }));
+}
+export async function lockRegister(id: number): Promise<DailyRegister> {
+  const actor = session.getUser();
+  if (!actor) throw new Error("Please sign in again.");
+  const register = await getDailyRegister(id);
+  const error = lockRegisterError(actor, register);
+  if (error) throw new Error(error);
+  if (isMock) return mockLockRegister(actor, id);
+  return mapRegister(await request<Record<string, unknown>>("POST", `/registers/${id}/lock`, {}));
 }

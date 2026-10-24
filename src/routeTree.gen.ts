@@ -22,6 +22,7 @@ import { Route as AuthenticatedImportsRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedMembersRouteImport } from './routes/_authenticated.members'
 import { Route as AuthenticatedPeriodsRouteImport } from './routes/_authenticated.periods'
 import { Route as AuthenticatedPlaceholderRouteImport } from './routes/_authenticated.placeholder'
+import { Route as AuthenticatedRegistersRouteImport } from './routes/_authenticated.registers'
 import { Route as AuthenticatedTreasuryRouteImport } from './routes/_authenticated.treasury'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 
@@ -93,6 +94,11 @@ const AuthenticatedPlaceholderRoute =
     path: '/placeholder',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedRegistersRoute = AuthenticatedRegistersRouteImport.update({
+  id: '/registers',
+  path: '/registers',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedTreasuryRoute = AuthenticatedTreasuryRouteImport.update({
   id: '/treasury',
   path: '/treasury',
@@ -118,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/members': typeof AuthenticatedMembersRoute
   '/periods': typeof AuthenticatedPeriodsRoute
   '/placeholder': typeof AuthenticatedPlaceholderRoute
+  '/registers': typeof AuthenticatedRegistersRoute
   '/treasury': typeof AuthenticatedTreasuryRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
 }
@@ -134,6 +141,7 @@ export interface FileRoutesByTo {
   '/members': typeof AuthenticatedMembersRoute
   '/periods': typeof AuthenticatedPeriodsRoute
   '/placeholder': typeof AuthenticatedPlaceholderRoute
+  '/registers': typeof AuthenticatedRegistersRoute
   '/treasury': typeof AuthenticatedTreasuryRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
 }
@@ -152,6 +160,7 @@ export interface FileRoutesById {
   '/_authenticated/members': typeof AuthenticatedMembersRoute
   '/_authenticated/periods': typeof AuthenticatedPeriodsRoute
   '/_authenticated/placeholder': typeof AuthenticatedPlaceholderRoute
+  '/_authenticated/registers': typeof AuthenticatedRegistersRoute
   '/_authenticated/treasury': typeof AuthenticatedTreasuryRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
 }
@@ -170,6 +179,7 @@ export interface FileRouteTypes {
     | '/members'
     | '/periods'
     | '/placeholder'
+    | '/registers'
     | '/treasury'
     | '/.mcp/invoke-tool/$tool'
   fileRoutesByTo: FileRoutesByTo
@@ -186,6 +196,7 @@ export interface FileRouteTypes {
     | '/members'
     | '/periods'
     | '/placeholder'
+    | '/registers'
     | '/treasury'
     | '/.mcp/invoke-tool/$tool'
   id:
@@ -203,6 +214,7 @@ export interface FileRouteTypes {
     | '/_authenticated/members'
     | '/_authenticated/periods'
     | '/_authenticated/placeholder'
+    | '/_authenticated/registers'
     | '/_authenticated/treasury'
     | '/.mcp/invoke-tool/$tool'
   fileRoutesById: FileRoutesById
@@ -310,6 +322,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPlaceholderRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/registers': {
+      id: '/_authenticated/registers'
+      path: '/registers'
+      fullPath: '/registers'
+      preLoaderRoute: typeof AuthenticatedRegistersRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/treasury': {
       id: '/_authenticated/treasury'
       path: '/treasury'
@@ -335,6 +354,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedMembersRoute: typeof AuthenticatedMembersRoute
   AuthenticatedPeriodsRoute: typeof AuthenticatedPeriodsRoute
   AuthenticatedPlaceholderRoute: typeof AuthenticatedPlaceholderRoute
+  AuthenticatedRegistersRoute: typeof AuthenticatedRegistersRoute
   AuthenticatedTreasuryRoute: typeof AuthenticatedTreasuryRoute
 }
 
@@ -346,6 +366,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedMembersRoute: AuthenticatedMembersRoute,
   AuthenticatedPeriodsRoute: AuthenticatedPeriodsRoute,
   AuthenticatedPlaceholderRoute: AuthenticatedPlaceholderRoute,
+  AuthenticatedRegistersRoute: AuthenticatedRegistersRoute,
   AuthenticatedTreasuryRoute: AuthenticatedTreasuryRoute,
 }
 
