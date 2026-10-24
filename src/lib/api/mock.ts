@@ -1,10 +1,15 @@
 import { branchReviewError, validateBranchReview } from "../disbursement-workflow";
-import type { BranchReviewInput, AdminData, AdminUser, Branch, DashboardData, Disbursement, ImportBatch, LoginResponse, Member, MonthlyPeriod, RoleCode, TreasuryTransaction, User } from "./types";
+import { canCountRegister, emptyCount, expectedVaultCash, lockRegisterError, resolveVarianceError, totalPhysicalCash, validateVarianceResolution } from "../register-workflow";
+import type { BranchReviewInput, AdminData, AdminUser, Branch, CashDenominations, DailyRegister, DashboardData, Disbursement, ImportBatch, LoginResponse, Member, MonthlyPeriod, RegisterStatus, ResolveVarianceInput, RoleCode, SaveRegisterCountInput, TreasuryTransaction, User, VarianceCategory } from "./types";
 
 const branches: Branch[] = [
   { id: 3, name: "Head Office", code: "HQ", address: "Head Office" },
   { id: 1, name: "Lagos Central", code: "LAG-01", address: "12 Marina Road, Lagos" },
   { id: 2, name: "Ibadan North", code: "IBA-02", address: "4 Mokola Hill, Ibadan" },
+  { id: 4, name: "Sango", code: "SGO", address: "Sango Ota" },
+  { id: 5, name: "Itori", code: "ITR", address: "Itori" },
+  { id: 6, name: "Ikotun", code: "IKT", address: "Ikotun" },
+  { id: 7, name: "Owode", code: "OWD", address: "Owode" },
 ];
 
 const users: Array<User & { password: string }> = [
