@@ -42,11 +42,13 @@ export const varianceCategories: Record<VarianceCategory, string> = {
 };
 
 const has = (user: User, ...roles: RoleCode[]) => user.roles.some((role) => roles.includes(role));
+const isBranchBound = (user: User) => !has(user, "SUPER_ADMIN", "SUB_ADMIN");
 const sameBranch = (user: User, register: DailyRegister) => !user.branch || user.branch.id === register.branchId;
 
-/** Only supervisors may categorise and authorise a variance. */
+/** Only supervisors may categorise and authorise a variance; admins operate across branches, managers within their own. */
 export function canResolveVariance(user: User, register: DailyRegister): boolean {
-  return has(user, "BRANCH_MANAGER", "SUPER_ADMIN", "SUB_ADMIN") && sameBranch(user, register);
+  if (!has(user, "BRANCH_MANAGER", "SUPER_ADMIN", "SUB_ADMIN")) return false;
+  return !isBranchBound(user) || sameBranch(user, register);
 }
 
 export function resolveVarianceError(user: User, register: DailyRegister): string | null {
@@ -64,7 +66,7 @@ export function validateVarianceResolution(input: { category?: VarianceCategory;
 /** Locking requires the register to be settled; flagged variances block it. */
 export function lockRegisterError(user: User, register: DailyRegister): string | null {
   if (!has(user, "BRANCH_MANAGER", "SUPER_ADMIN", "SUB_ADMIN")) return "Only a branch manager or administrator may lock a register.";
-  if (!sameBranch(user, register)) return "You may only lock the register for your own branch.";
+  if (isBranchBound(user) && !sameBranch(user, register)) return "You may only lock the register for your own branch.";
   if (register.status === "VARIANCE_FLAGGED") return "Resolve variance before locking.";
   if (register.status === "LOCKED") return "This register is already locked.";
   return null;
@@ -72,7 +74,8 @@ export function lockRegisterError(user: User, register: DailyRegister): string |
 
 export function canCountRegister(user: User, register: DailyRegister): boolean {
   if (register.status === "LOCKED") return false;
-  return has(user, "BRANCH_MANAGER", "FINANCE_OFFICER", "SUPER_ADMIN", "SUB_ADMIN") && sameBranch(user, register);
+  if (!has(user, "BRANCH_MANAGER", "FINANCE_OFFICER", "SUPER_ADMIN", "SUB_ADMIN")) return false;
+  return !isBranchBound(user) || sameBranch(user, register);
 }
 
 export const registerStatusLabels: Record<RegisterStatus, string> = {
