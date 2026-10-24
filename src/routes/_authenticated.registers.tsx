@@ -1,0 +1,3 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { DailyRegisterPage } from "@/components/DailyRegister";
+export const Route = createFileRoute("/_authenticated/registers")({ head: () => ({ meta: [{ title: "Daily register — Lifter's Touch" }, { name: "description", content: "Daily branch cash register, physical till counts, variance resolution, and locking." }, { property: "og:title", content: "Daily register — Lifter's Touch" }, { property: "og:description", content: "Daily branch cash register, physical till counts, variance resolution, and locking." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }), component: DailyRegisterPage });

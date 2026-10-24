@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
-import { BarChart3, ClipboardList, FileSpreadsheet, Landmark, LayoutDashboard, LogOut, Menu, ReceiptText, Settings2, UsersRound, X } from "lucide-react";
+import { BarChart3, Calculator, ClipboardList, FileSpreadsheet, Landmark, LayoutDashboard, LogOut, Menu, ReceiptText, Settings2, UsersRound, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { useAuth } from "@/lib/auth";
@@ -10,6 +10,7 @@ const links = [
   { label: "Overview", to: "/dashboard", icon: LayoutDashboard, roles: [] as RoleCode[] },
   { label: "Members", to: "/members", icon: UsersRound, roles: [] as RoleCode[] },
   { label: "Disbursements", to: "/disbursements", icon: ReceiptText, roles: [] as RoleCode[] },
+  { label: "Daily register", to: "/registers", icon: Calculator, roles: ["BRANCH_MANAGER", "FINANCE_OFFICER", "SUPER_ADMIN", "SUB_ADMIN", "AUDITOR"] as RoleCode[] },
   { label: "Treasury", to: "/treasury", icon: Landmark, roles: ["FINANCE_OFFICER", "SUPER_ADMIN", "SUB_ADMIN"] as RoleCode[] },
   { label: "Periods & reconciliation", to: "/periods", icon: BarChart3, roles: ["AUDITOR", "FINANCE_OFFICER", "SUPER_ADMIN", "SUB_ADMIN"] as RoleCode[] },
   { label: "Imports", to: "/imports", icon: FileSpreadsheet, roles: ["FINANCE_OFFICER", "SUPER_ADMIN", "SUB_ADMIN"] as RoleCode[] },
