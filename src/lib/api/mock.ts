@@ -127,4 +127,74 @@ export const mockReviewDisbursement = async (id: number, input: BranchReviewInpu
   return enrichDisbursement(item);
 };
 
+// ---- Daily branch cash register & till reconciliation (workbook columns M–Q) ----
+const isoDate = (offsetDays = 0) => new Date(Date.now() + offsetDays * 86_400_000).toISOString().slice(0, 10);
+const branchName = (branchId: number) => branches.find((branch) => branch.id === branchId)?.name ?? `Branch ${branchId}`;
+const baseRegister = (id: number, branchId: number, registerDate: string, status: RegisterStatus, cashBookOpening: number, totalCollections: number, totalDisbursements: number, monitoringCash: number, overrides: Partial<DailyRegister> = {}): DailyRegister => {
+  const expected = cashBookOpening + totalCollections - totalDisbursements - monitoringCash;
+  return { id, branchId, branchName: branchName(branchId), registerDate, status, cashBookOpening, totalCollections, totalDisbursements, monitoringCash, expectedPhysicalCash: expected, physicalCashCounted: overrides.physicalCashCounted ?? 0, variance: overrides.variance ?? expected - (overrides.physicalCashCounted ?? 0), denominations: null, ...overrides };
+};
+const dailyRegisters: DailyRegister[] = [
+  baseRegister(1, 4, isoDate(), "OPEN", 150_000, 220_000, 120_000, 30_000),
+  baseRegister(2, 5, isoDate(), "OPEN", 90_000, 160_000, 80_000, 25_000),
+  baseRegister(3, 6, isoDate(), "BALANCED", 250_000, 300_000, 150_000, 50_000, { physicalCashCounted: 350_000, denominations: { n1000: 340, n500: 0, n200: 50, n100: 0, n50: 0, n20: 0, n10: 0 } }),
+  // Owode historical variance matches workbook cell Q12: -₦34,800 (cash overage).
+  baseRegister(4, 7, isoDate(), "VARIANCE_FLAGGED", 200_000, 180_000, 90_000, 40_000, { physicalCashCounted: 284_800, variance: -34_800, denominations: { n1000: 248, n500: 70, n200: 8, n100: 2, n50: 0, n20: 0, n10: 0 } }),
+  baseRegister(5, 6, isoDate(-1), "VARIANCE_APPROVED", 180_000, 140_000, 60_000, 45_000, { physicalCashCounted: 214_800, variance: 200, varianceCategory: "TRANSIT_TIMING_DELAY", varianceReason: "Field cash for the day reached the vault after the closing count.", varianceApprovedBy: "Adaeze Nwosu" }),
+  baseRegister(6, 4, isoDate(-1), "LOCKED", 120_000, 210_000, 90_000, 30_000, { physicalCashCounted: 210_000, closedBy: "Adaeze Nwosu", closedAt: `${isoDate(-1)}T17:40:00Z`, lockedAt: `${isoDate(-1)}T17:45:00Z` }),
+];
+
+const registerDate = (item: DailyRegister) => item.registerDate;
+export const mockGetDailyRegisters = async (user: User, branchId?: number, date?: string): Promise<DailyRegister[]> => {
+  await delay();
+  const branchVisible = user.branch ? dailyRegisters.filter((item) => item.branchId === user.branch?.id) : dailyRegisters;
+  return branchVisible.filter((item) => (!branchId || item.branchId === branchId) && (!date || registerDate(item) === date)).map((item) => ({ ...item, denominations: item.denominations ? { ...item.denominations } : null }));
+};
+export const mockGetDailyRegister = async (id: number, user?: User): Promise<DailyRegister> => {
+  await delay();
+  const item = dailyRegisters.find((candidate) => candidate.id === id);
+  if (!item || (user?.branch && item.branchId !== user.branch.id)) throw new Error("Daily register not found.");
+  return { ...item, denominations: item.denominations ? { ...item.denominations } : null };
+};
+export const mockSaveRegisterCount = async (user: User, input: SaveRegisterCountInput): Promise<DailyRegister> => {
+  await delay();
+  const item = dailyRegisters.find((candidate) => candidate.id === input.registerId);
+  if (!item) throw new Error("Daily register not found.");
+  if (item.status === "LOCKED") throw new Error("This register is locked and can no longer be counted.");
+  if (!canCountRegister(user, item)) throw new Error("Only this branch's manager, finance officer, or an administrator may record the till count.");
+  const counted = totalPhysicalCash(input.denominations);
+  const variance = expectedVaultCash(item) - counted;
+  item.physicalCashCounted = counted;
+  item.expectedPhysicalCash = expectedVaultCash(item);
+  item.variance = variance;
+  item.denominations = { ...emptyCount(), ...input.denominations };
+  item.status = variance === 0 ? "BALANCED" : "VARIANCE_FLAGGED";
+  return { ...item };
+};
+export const mockResolveVariance = async (user: User, input: ResolveVarianceInput): Promise<DailyRegister> => {
+  await delay();
+  const item = dailyRegisters.find((candidate) => candidate.id === input.registerId);
+  if (!item) throw new Error("Daily register not found.");
+  const error = resolveVarianceError(user, item) ?? validateVarianceResolution(input);
+  if (error) throw new Error(error);
+  item.varianceCategory = input.category as VarianceCategory;
+  item.varianceReason = input.reason.trim();
+  item.varianceApprovedBy = user.name;
+  item.status = "VARIANCE_APPROVED";
+  return { ...item };
+};
+export const mockLockRegister = async (user: User, id: number): Promise<DailyRegister> => {
+  await delay();
+  const item = dailyRegisters.find((candidate) => candidate.id === id);
+  if (!item) throw new Error("Daily register not found.");
+  const error = lockRegisterError(user, item);
+  if (error) throw new Error(error);
+  const now = new Date().toISOString();
+  item.status = "LOCKED";
+  item.closedBy = user.name;
+  item.closedAt = now;
+  item.lockedAt = now;
+  return { ...item };
+};
+
 export const roleLabel = (role: RoleCode) => role.replaceAll("_", " ").toLowerCase().replace(/(^|\s)\S/g, (letter) => letter.toUpperCase());
