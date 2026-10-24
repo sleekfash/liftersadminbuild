@@ -1,6 +1,7 @@
-import { mockGetDisbursement, mockReviewDisbursement, mockAdminData, mockCreateBranch, mockCreateDisbursement, mockCreateImport, mockCreatePeriod, mockCreateUser, mockDashboard, mockListDisbursements, mockListImports, mockListMembers, mockListPeriods, mockListTreasury, mockLogin, mockSubmitDisbursement, mockTransitionDisbursement } from "./mock";
+import { mockGetDailyRegister, mockGetDailyRegisters, mockGetDisbursement, mockLockRegister, mockResolveVariance, mockReviewDisbursement, mockAdminData, mockCreateBranch, mockCreateDisbursement, mockCreateImport, mockCreatePeriod, mockCreateUser, mockDashboard, mockListDailyRegisters, mockListDisbursements, mockListImports, mockListMembers, mockListPeriods, mockListTreasury, mockLogin, mockSaveRegisterCount, mockSubmitDisbursement, mockTransitionDisbursement } from "./mock";
 import { branchReviewError, validateBranchReview, transitions } from "../disbursement-workflow";
-import type { BranchReviewInput, ReviewStamp, AdminData, AdminUser, Branch, DashboardData, Disbursement, DisbursementAction, ImportBatch, LoginResponse, Member, MonthlyPeriod, RoleCode, TreasuryTransaction, User } from "./types";
+import { canResolveVariance, lockRegisterError, resolveVarianceError, validateVarianceResolution } from "../register-workflow";
+import type { BranchReviewInput, ReviewStamp, AdminData, AdminUser, Branch, CashDenominations, DailyRegister, DashboardData, Disbursement, DisbursementAction, ImportBatch, LoginResponse, Member, MonthlyPeriod, RegisterStatus, ResolveVarianceInput, RoleCode, SaveRegisterCountInput, TreasuryTransaction, User } from "./types";
 
 const TOKEN_KEY = "lifters-touch-token";
 const USER_KEY = "lifters-touch-user";
