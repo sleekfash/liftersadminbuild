@@ -3,12 +3,25 @@ export type RoleCode =
   | "SUB_ADMIN"
   | "FINANCE_OFFICER"
   | "BRANCH_MANAGER"
+  | "CREDIT_OFFICER"
   | "AUDITOR";
 
 export type MemberStatus = "PENDING" | "VERIFIED" | "ACTIVE" | "SUSPENDED" | "TERMINATED";
 export type DisbursementStage = "DRAFT" | "SUBMITTED" | "BRANCH_APPROVED" | "FINANCE_REVIEW" | "AUTHORIZED" | "PAID" | "REJECTED";
 export type PeriodStatus = "OPEN" | "REVIEW" | "CLOSED" | "LOCKED";
 export type ImportStatus = "UPLOADED" | "MAPPED" | "VALIDATED" | "POSTED" | "FAILED";
+export type RegisterStatus = "OPEN" | "COUNTED" | "BALANCED" | "VARIANCE_FLAGGED" | "VARIANCE_APPROVED" | "LOCKED";
+export type VarianceCategory = "FIELD_COLLECTION_SHORTAGE" | "UNRECORDED_DISBURSEMENT" | "PHYSICAL_CASH_OVERAGE" | "TRANSIT_TIMING_DELAY" | "OTHER";
+
+export interface CashDenominations {
+  n1000: number;
+  n500: number;
+  n200: number;
+  n100: number;
+  n50: number;
+  n20: number;
+  n10: number;
+}
 
 export interface Branch {
   id: number;
