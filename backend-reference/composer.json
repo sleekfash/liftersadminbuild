@@ -4,7 +4,7 @@
   "description": "Final consolidated Laravel backend for Lifter's Touch Empowerment Foundation.",
   "require": {
     "php": "^8.2",
-    "laravel/framework": "^11.0",
+    "laravel/framework": "^12.0",
     "laravel/sanctum": "^4.0",
     "laravel/tinker": "^2.9"
   },
