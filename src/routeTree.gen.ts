@@ -18,6 +18,7 @@ import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } fr
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
 import { Route as AuthenticatedDisbursementsRouteImport } from './routes/_authenticated.disbursements'
+import { Route as AuthenticatedHandoversRouteImport } from './routes/_authenticated.handovers'
 import { Route as AuthenticatedImportsRouteImport } from './routes/_authenticated.imports'
 import { Route as AuthenticatedMembersRouteImport } from './routes/_authenticated.members'
 import { Route as AuthenticatedPeriodsRouteImport } from './routes/_authenticated.periods'
@@ -73,6 +74,11 @@ const AuthenticatedDisbursementsRoute =
     path: '/disbursements',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedHandoversRoute = AuthenticatedHandoversRouteImport.update({
+  id: '/handovers',
+  path: '/handovers',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedImportsRoute = AuthenticatedImportsRouteImport.update({
   id: '/imports',
   path: '/imports',
@@ -120,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/disbursements': typeof AuthenticatedDisbursementsRoute
+  '/handovers': typeof AuthenticatedHandoversRoute
   '/imports': typeof AuthenticatedImportsRoute
   '/members': typeof AuthenticatedMembersRoute
   '/periods': typeof AuthenticatedPeriodsRoute
@@ -137,6 +144,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/disbursements': typeof AuthenticatedDisbursementsRoute
+  '/handovers': typeof AuthenticatedHandoversRoute
   '/imports': typeof AuthenticatedImportsRoute
   '/members': typeof AuthenticatedMembersRoute
   '/periods': typeof AuthenticatedPeriodsRoute
@@ -156,6 +164,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/disbursements': typeof AuthenticatedDisbursementsRoute
+  '/_authenticated/handovers': typeof AuthenticatedHandoversRoute
   '/_authenticated/imports': typeof AuthenticatedImportsRoute
   '/_authenticated/members': typeof AuthenticatedMembersRoute
   '/_authenticated/periods': typeof AuthenticatedPeriodsRoute
@@ -175,6 +184,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/disbursements'
+    | '/handovers'
     | '/imports'
     | '/members'
     | '/periods'
@@ -192,6 +202,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/disbursements'
+    | '/handovers'
     | '/imports'
     | '/members'
     | '/periods'
@@ -210,6 +221,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
     | '/_authenticated/disbursements'
+    | '/_authenticated/handovers'
     | '/_authenticated/imports'
     | '/_authenticated/members'
     | '/_authenticated/periods'
@@ -294,6 +306,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDisbursementsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/handovers': {
+      id: '/_authenticated/handovers'
+      path: '/handovers'
+      fullPath: '/handovers'
+      preLoaderRoute: typeof AuthenticatedHandoversRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/imports': {
       id: '/_authenticated/imports'
       path: '/imports'
@@ -350,6 +369,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDisbursementsRoute: typeof AuthenticatedDisbursementsRoute
+  AuthenticatedHandoversRoute: typeof AuthenticatedHandoversRoute
   AuthenticatedImportsRoute: typeof AuthenticatedImportsRoute
   AuthenticatedMembersRoute: typeof AuthenticatedMembersRoute
   AuthenticatedPeriodsRoute: typeof AuthenticatedPeriodsRoute
@@ -362,6 +382,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDisbursementsRoute: AuthenticatedDisbursementsRoute,
+  AuthenticatedHandoversRoute: AuthenticatedHandoversRoute,
   AuthenticatedImportsRoute: AuthenticatedImportsRoute,
   AuthenticatedMembersRoute: AuthenticatedMembersRoute,
   AuthenticatedPeriodsRoute: AuthenticatedPeriodsRoute,

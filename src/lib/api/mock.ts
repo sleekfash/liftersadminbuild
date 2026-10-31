@@ -1,6 +1,7 @@
 import { branchReviewError, validateBranchReview } from "../disbursement-workflow";
 import { canCountRegister, emptyCount, expectedVaultCash, lockRegisterError, resolveVarianceError, totalPhysicalCash, validateVarianceResolution } from "../register-workflow";
-import type { BranchReviewInput, AdminData, AdminUser, Branch, CashDenominations, DailyRegister, DashboardData, Disbursement, ImportBatch, LoginResponse, Member, MonthlyPeriod, RegisterStatus, ResolveVarianceInput, RoleCode, SaveRegisterCountInput, TreasuryTransaction, User, VarianceCategory } from "./types";
+import { acknowledgeError, approveError, disputeError, isAdminActor, isParty, openHandoverError, signNotesError, transferBlockError } from "../handover-workflow";
+import type { BranchReviewInput, AdminData, AdminUser, Branch, BranchHandover, BranchManagerAssignment, CashDenominations, DailyRegister, DashboardData, Disbursement, HandoverAuditEntry, HandoverSnapshot, ImportBatch, LoginResponse, Member, MonthlyPeriod, OpenHandoverInput, PostBranchManagerInput, RegisterStatus, ResolveVarianceInput, RoleCode, SaveRegisterCountInput, TreasuryTransaction, User, VarianceCategory } from "./types";
 
 const branches: Branch[] = [
   { id: 3, name: "Head Office", code: "HQ", address: "Head Office" },
@@ -18,6 +19,9 @@ const users: Array<User & { password: string }> = [
   { id: 2, name: "Tunde Balogun", email: "finance@example.com", roles: ["FINANCE_OFFICER"], branch: null, password: "password" },
   { id: 3, name: "Adaeze Nwosu", email: "manager.lagos@example.com", roles: ["BRANCH_MANAGER"], branch: branches[1], password: "password" },
   { id: 4, name: "Chinedu Eze", email: "auditor@example.com", roles: ["AUDITOR"], branch: null, password: "password" },
+  { id: 6, name: "Emeka Obi", email: "manager.itori@example.com", roles: ["BRANCH_MANAGER"], branch: branches[4], password: "password" },
+  { id: 7, name: "Ngozi Ade", email: "manager.ibadan@example.com", roles: ["BRANCH_MANAGER"], branch: branches[2], password: "password" },
+  { id: 8, name: "Bisi Adebayo", email: "manager.owode@example.com", roles: ["BRANCH_MANAGER"], branch: branches[6], password: "password" },
 ];
 
 const members: Member[] = [
@@ -75,7 +79,7 @@ export const mockDashboard = async (user: User): Promise<DashboardData> => {
     members: memberStatuses.map((status) => ({ status, count: visibleMembers.filter((member) => member.status === status).length })),
     disbursements: stages.map((stage) => ({ stage, count: visibleDisbursements.filter((item) => item.stage === stage).length, value: visibleDisbursements.filter((item) => item.stage === stage).reduce((total, item) => total + item.amount, 0) })),
     openReconciliation: user.roles.includes("AUDITOR") ? 8 : user.branch ? 3 : 11,
-    pendingHandovers: user.roles.some((role) => ["SUPER_ADMIN", "SUB_ADMIN"].includes(role)) ? 2 : 0,
+    pendingHandovers: handovers.filter((item) => ["DRAFT", "PENDING_INCOMING", "PENDING_APPROVAL"].includes(item.status) && (isAdminActor(user) || isParty(user, item) || item.branchId === user.branch?.id)).length,
     auditEvents: [
       { id: 1, label: "Disbursement submitted for review", actor: "Adaeze Nwosu", time: "12 minutes ago", severity: "info" },
       { id: 2, label: "Reconciliation item flagged", actor: "System", time: "48 minutes ago", severity: "warning" },
@@ -196,5 +200,134 @@ export const mockLockRegister = async (user: User, id: number): Promise<DailyReg
   item.lockedAt = now;
   return { ...item };
 };
+
+// ---- Branch-owned manager handover: claims → acceptance/dispute → approval → posting ----
+const assignments: BranchManagerAssignment[] = [
+  { id: 1, branchId: 1, userId: 3, isActive: true, startedAt: "2025-04-01T09:00:00Z" },
+  { id: 2, branchId: 2, userId: 7, isActive: true, startedAt: "2025-06-15T09:00:00Z" },
+  { id: 3, branchId: 5, userId: 6, isActive: true, startedAt: "2026-01-10T09:00:00Z" },
+];
+const currentManagerOf = (branchId: number) => assignments.find((item) => item.isActive && item.branchId === branchId) ?? null;
+const buildSnapshot = (branchId: number, capturedAt = new Date().toISOString()): HandoverSnapshot => {
+  const branchMembers = members.filter((member) => member.branchId === branchId);
+  const branchDisbursements = disbursements.filter((item) => item.branchId === branchId);
+  const membersByStatus: Record<string, number> = {};
+  const disbursementsByStage: Record<string, number> = {};
+  branchMembers.forEach((member) => { membersByStatus[member.status] = (membersByStatus[member.status] ?? 0) + 1; });
+  branchDisbursements.forEach((item) => { disbursementsByStage[item.stage] = (disbursementsByStage[item.stage] ?? 0) + 1; });
+  return { capturedAt, membersByStatus, membersTotal: branchMembers.length, disbursementsByStage, openDisbursementValue: branchDisbursements.filter((item) => item.stage !== "PAID").reduce((total, item) => total + item.amount, 0), unpostedImportBatches: imports.filter((batch) => batch.branchId === branchId && batch.status !== "POSTED").length, openReconciliationItems: 0, latestClosedPeriodId: periods.find((period) => period.status === "LOCKED")?.id ?? null };
+};
+const hoursAgo = (hours: number) => new Date(Date.now() - hours * 3600000).toISOString();
+const handovers: BranchHandover[] = [
+  { id: 1, branchId: 1, branchName: "Lagos Central", branchCode: "LAG-01", outgoingUserId: 3, outgoingUserName: "Adaeze Nwosu", incomingUserId: 6, incomingUserName: "Emeka Obi", status: "DRAFT", snapshot: buildSnapshot(1), createdBy: 3, createdAt: hoursAgo(3) },
+  // Outgoing signed; the incoming officer must accept or dispute before approval.
+  { id: 2, branchId: 2, branchName: "Ibadan North", branchCode: "IBA-02", outgoingUserId: 7, outgoingUserName: "Ngozi Ade", incomingUserId: 8, incomingUserName: "Bisi Adebayo", status: "PENDING_INCOMING", snapshot: buildSnapshot(2), outgoingSignedAt: hoursAgo(20), outgoingNotes: "Till keys, register files, and two pending member verifications handed over.", createdBy: 1, createdAt: hoursAgo(24) },
+  { id: 3, branchId: 5, branchName: "Itori", branchCode: "ITR", outgoingUserId: 7, outgoingUserName: "Ngozi Ade", incomingUserId: 6, incomingUserName: "Emeka Obi", status: "COMPLETED", snapshot: buildSnapshot(5, new Date(Date.now() - 45 * 86400000).toISOString()), outgoingSignedAt: new Date(Date.now() - 46 * 86400000).toISOString(), incomingSignedAt: new Date(Date.now() - 45 * 86400000).toISOString(), approvedBy: 5, approvedByName: "Agency Administrator", approvedAt: new Date(Date.now() - 45 * 86400000).toISOString(), createdBy: 5, createdAt: new Date(Date.now() - 47 * 86400000).toISOString() },
+];
+const handoverAudit: Array<HandoverAuditEntry & { handoverId: number }> = [];
+let nextAuditId = 100;
+const recordEvent = (handoverId: number, event: string, summary: string, actor?: User) => { handoverAudit.unshift({ id: nextAuditId++, handoverId, event, summary, actorId: actor?.id, actorName: actor?.name, at: new Date().toISOString() }); };
+recordEvent(1, "HANDOVER", "Handover claim opened for Lagos Central with a frozen portfolio snapshot.", users.find((candidate) => candidate.id === 3));
+recordEvent(2, "HANDOVER", "Handover claim opened for Ibadan North with a frozen portfolio snapshot.", users.find((candidate) => candidate.id === 1));
+recordEvent(2, "HANDOVER", "Outgoing officer signed the handover claims. Awaiting incoming acceptance.", users.find((candidate) => candidate.id === 7));
+recordEvent(3, "HANDOVER", "Handover approved and completed. The incoming officer may now be posted.", users.find((candidate) => candidate.id === 5));
+const nextHandoverId = () => Math.max(0, ...handovers.map((item) => item.id)) + 1;
+const cloneHandover = (item: BranchHandover): BranchHandover => ({ ...item, snapshot: item.snapshot ? { ...item.snapshot, membersByStatus: { ...item.snapshot.membersByStatus }, disbursementsByStage: { ...item.snapshot.disbursementsByStage } } : null, auditTrail: handoverAudit.filter((entry) => entry.handoverId === item.id).map((entry) => ({ ...entry })) });
+const visibleHandovers = (user: User) => user.branch ? handovers.filter((item) => item.branchId === user.branch?.id) : handovers;
+
+export const mockListHandovers = async (user: User, branchId?: number): Promise<BranchHandover[]> => { await delay(); return visibleHandovers(user).filter((item) => !branchId || item.branchId === branchId).map(cloneHandover); };
+export const mockGetHandover = async (user: User, id: number): Promise<BranchHandover> => {
+  await delay();
+  const item = handovers.find((candidate) => candidate.id === id);
+  if (!item || !(user.branch ? item.branchId === user.branch.id || isParty(user, item) : true) && !isAdminActor(user)) throw new Error("Handover not found.");
+  return cloneHandover(item);
+};
+export const mockOpenHandover = async (user: User, input: OpenHandoverInput): Promise<BranchHandover> => {
+  await delay();
+  const branch = branches.find((candidate) => candidate.id === input.branchId);
+  if (!branch) throw new Error("Branch not found.");
+  const incumbent = currentManagerOf(input.branchId);
+  const openExists = handovers.some((item) => item.branchId === input.branchId && ["DRAFT", "PENDING_INCOMING", "PENDING_APPROVAL"].includes(item.status));
+  const error = openHandoverError(user, input, incumbent?.userId ?? null, openExists);
+  if (error) throw new Error(error);
+  const outgoingId = isAdminActor(user) ? input.outgoingUserId ?? incumbent?.userId ?? null : user.id;
+  const incomingUser = users.find((candidate) => candidate.id === input.incomingUserId);
+  if (!incomingUser) throw new Error("Choose the incoming officer.");
+  const item: BranchHandover = { id: nextHandoverId(), branchId: branch.id, branchName: branch.name, branchCode: branch.code, outgoingUserId: outgoingId, outgoingUserName: outgoingId != null ? users.find((candidate) => candidate.id === outgoingId)?.name ?? null : null, incomingUserId: incomingUser.id, incomingUserName: incomingUser.name, status: "DRAFT", snapshot: buildSnapshot(branch.id), createdBy: user.id, createdAt: new Date().toISOString() };
+  handovers.unshift(item);
+  recordEvent(item.id, "HANDOVER", `Handover claim opened for ${branch.name} with a frozen portfolio snapshot.`, user);
+  return cloneHandover(item);
+};
+export const mockSignOutgoingHandover = async (user: User, handoverId: number, notes?: string): Promise<BranchHandover> => {
+  await delay();
+  const item = handovers.find((candidate) => candidate.id === handoverId);
+  if (!item) throw new Error("Handover not found.");
+  if (item.status !== "DRAFT" || item.outgoingUserId !== user.id) throw new Error("Only the named outgoing officer can sign this claim, and only while it awaits sign-off.");
+  const error = signNotesError(notes);
+  if (error) throw new Error(error);
+  item.outgoingSignedAt = new Date().toISOString();
+  item.outgoingNotes = notes?.trim() || null;
+  item.status = "PENDING_INCOMING";
+  recordEvent(item.id, "HANDOVER", "Outgoing officer signed the handover claims. Awaiting incoming acceptance.", user);
+  return cloneHandover(item);
+};
+export const mockAcknowledgeHandover = async (user: User, handoverId: number, notes?: string): Promise<BranchHandover> => {
+  await delay();
+  const item = handovers.find((candidate) => candidate.id === handoverId);
+  if (!item) throw new Error("Handover not found.");
+  const error = acknowledgeError(user, item);
+  if (error) throw new Error(error);
+  item.incomingSignedAt = new Date().toISOString();
+  item.incomingNotes = notes?.trim() || null;
+  item.status = "PENDING_APPROVAL";
+  recordEvent(item.id, "HANDOVER", "Incoming officer accepted the handover claims. Awaiting administrator approval.", user);
+  return cloneHandover(item);
+};
+export const mockDisputeHandover = async (user: User, handoverId: number, reason: string): Promise<BranchHandover> => {
+  await delay();
+  const item = handovers.find((candidate) => candidate.id === handoverId);
+  if (!item) throw new Error("Handover not found.");
+  const error = disputeError(user, item, reason);
+  if (error) throw new Error(error);
+  item.status = "DISPUTED";
+  item.disputeReason = reason.trim();
+  recordEvent(item.id, "HANDOVER", `Handover disputed: ${reason.trim()}`, user);
+  return cloneHandover(item);
+};
+export const mockApproveHandover = async (user: User, handoverId: number): Promise<BranchHandover> => {
+  await delay();
+  const item = handovers.find((candidate) => candidate.id === handoverId);
+  if (!item) throw new Error("Handover not found.");
+  const error = approveError(user, item);
+  if (error) throw new Error(error);
+  item.status = "COMPLETED";
+  item.approvedBy = user.id;
+  item.approvedByName = user.name;
+  item.approvedAt = new Date().toISOString();
+  recordEvent(item.id, "HANDOVER", "Handover approved and completed. The incoming officer may now be posted.", user);
+  return cloneHandover(item);
+};
+export const mockPostBranchManager = async (user: User, input: PostBranchManagerInput): Promise<BranchManagerAssignment> => {
+  await delay();
+  const branch = branches.find((candidate) => candidate.id === input.branchId);
+  if (!branch) throw new Error("Branch not found.");
+  const incumbent = currentManagerOf(input.branchId);
+  const handover = input.handoverId ? handovers.find((candidate) => candidate.id === input.handoverId) ?? null : null;
+  const block = transferBlockError(user, input, handover, incumbent?.userId ?? null);
+  if (block) throw new Error(block);
+  if (!isAdminActor(user)) throw new Error("Only an administrator can post or replace a branch manager.");
+  if (incumbent?.userId === input.incomingUserId) throw new Error("This officer already manages the branch.");
+  const incomingUser = users.find((candidate) => candidate.id === input.incomingUserId);
+  if (!incomingUser) throw new Error("Officer not found.");
+  const now = new Date().toISOString();
+  assignments.filter((item) => item.isActive && (item.id === incumbent?.id || (item.userId === input.incomingUserId && item.branchId !== input.branchId))).forEach((item) => { item.isActive = false; item.endedAt = now; item.endedReason = input.reason?.trim() || "Replaced by a new posting."; });
+  const assignment: BranchManagerAssignment = { id: Math.max(0, ...assignments.map((item) => item.id)) + 1, branchId: input.branchId, userId: input.incomingUserId, isActive: true, startedAt: now };
+  assignments.push(assignment);
+  // The officer's posting changes; branch-owned records stay with the branch.
+  incomingUser.branch = branch;
+  recordEvent(handover?.id ?? 0, "ASSIGNMENT", `Branch manager posted to ${branch.name}. Branch records were not moved${handover ? ` (handover #${handover.id} completed)` : " (super admin override)"}.`, user);
+  return { ...assignment };
+};
+export const mockListManagerCandidates = async (): Promise<User[]> => { await delay(); return users.filter((candidate) => candidate.roles.includes("BRANCH_MANAGER")).map(({ password: _password, ...safe }) => safe); };
 
 export const roleLabel = (role: RoleCode) => role.replaceAll("_", " ").toLowerCase().replace(/(^|\s)\S/g, (letter) => letter.toUpperCase());
