@@ -1,0 +1,3 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { HandoversPage } from "@/components/Handovers";
+export const Route = createFileRoute("/_authenticated/handovers")({ head: () => ({ meta: [{ title: "Manager handovers — Lifter's Touch" }, { name: "description", content: "Branch manager handover claims, incoming acceptance or dispute, admin approval, and blocked-until-complete transfers." }, { property: "og:title", content: "Manager handovers — Lifter's Touch" }, { property: "og:description", content: "Branch manager handover claims, incoming acceptance or dispute, admin approval, and blocked-until-complete transfers." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }), component: HandoversPage });
