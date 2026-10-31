@@ -158,15 +158,67 @@ export interface BranchManagerAssignment {
   isActive: boolean;
   startedAt?: string;
   endedAt?: string;
+  endedReason?: string | null;
+}
+
+export type HandoverStatus = "DRAFT" | "PENDING_INCOMING" | "PENDING_APPROVAL" | "COMPLETED" | "DISPUTED";
+
+export interface HandoverSnapshot {
+  capturedAt: string;
+  membersByStatus: Record<string, number>;
+  membersTotal: number;
+  disbursementsByStage: Record<string, number>;
+  openDisbursementValue: number;
+  unpostedImportBatches: number;
+  openReconciliationItems: number;
+  latestClosedPeriodId?: number | null;
+}
+
+export interface HandoverAuditEntry {
+  id: number;
+  event: string;
+  summary: string;
+  actorId?: number;
+  actorName?: string;
+  at: string;
 }
 
 export interface BranchHandover {
   id: number;
   branchId: number;
-  outgoingUserId: number;
-  incomingUserId: number;
-  status: string;
+  branchName?: string;
+  branchCode?: string;
+  outgoingUserId: number | null;
+  outgoingUserName?: string | null;
+  incomingUserId: number | null;
+  incomingUserName?: string | null;
+  status: HandoverStatus;
+  snapshot?: HandoverSnapshot | null;
+  outgoingSignedAt?: string | null;
+  outgoingNotes?: string | null;
+  incomingSignedAt?: string | null;
+  incomingNotes?: string | null;
+  disputeReason?: string | null;
+  approvedBy?: number | null;
+  approvedByName?: string | null;
+  approvedAt?: string | null;
+  createdBy?: number | null;
   createdAt?: string;
+  auditTrail?: HandoverAuditEntry[];
+}
+
+export interface OpenHandoverInput {
+  branchId: number;
+  outgoingUserId?: number;
+  incomingUserId: number;
+}
+
+export interface PostBranchManagerInput {
+  branchId: number;
+  incomingUserId: number;
+  handoverId?: number;
+  override?: boolean;
+  reason?: string;
 }
 
 export interface DailyRegister {
