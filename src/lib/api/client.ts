@@ -2,7 +2,7 @@ import { acknowledgeError, approveError, disputeError, signNotesError, transferB
 import { mockAcknowledgeHandover, mockApproveHandover, mockDisputeHandover, mockGetHandover, mockListHandovers, mockListManagerCandidates, mockOpenHandover, mockPostBranchManager, mockSignOutgoingHandover, mockGetDailyRegister, mockGetDisbursement, mockLockRegister, mockResolveVariance, mockReviewDisbursement, mockAdminData, mockCreateBranch, mockCreateDisbursement, mockCreateImport, mockCreatePeriod, mockCreateUser, mockDashboard, mockGetDailyRegisters as mockListDailyRegisters, mockListDisbursements, mockListImports, mockListMembers, mockListPeriods, mockListTreasury, mockLogin, mockSaveRegisterCount, mockSubmitDisbursement, mockTransitionDisbursement } from "./mock";
 import { branchReviewError, validateBranchReview, transitions } from "../disbursement-workflow";
 import { canResolveVariance, lockRegisterError, resolveVarianceError, validateVarianceResolution } from "../register-workflow";
-import type { BranchReviewInput, ReviewStamp, AdminData, AdminUser, Branch, BranchHandover, BranchManagerAssignment, CashDenominations, DailyRegister, DashboardData, Disbursement, DisbursementAction, HandoverSnapshot, ImportBatch, LoginResponse, Member, MonthlyPeriod, OpenHandoverInput, PostBranchManagerInput, RegisterStatus, ResolveVarianceInput, RoleCode, SaveRegisterCountInput, TreasuryTransaction, User } from "./types";
+import type { BranchReviewInput, ReviewStamp, AdminData, AdminUser, Branch, BranchHandover, BranchManagerAssignment, CashDenominations, DailyRegister, DashboardData, Disbursement, DisbursementAction, HandoverAuditEntry, HandoverSnapshot, ImportBatch, LoginResponse, Member, MonthlyPeriod, OpenHandoverInput, PostBranchManagerInput, RegisterStatus, ResolveVarianceInput, RoleCode, SaveRegisterCountInput, TreasuryTransaction, User } from "./types";
 
 const TOKEN_KEY = "lifters-touch-token";
 const USER_KEY = "lifters-touch-user";
@@ -83,6 +83,156 @@ export async function createImport(data: { filename: string; branchId: number })
 export async function adminData(): Promise<AdminData> { if (isMock) return mockAdminData(); const [branches, users, roles, auditLogs] = await Promise.all([listBranches(), request<unknown>("GET", "/users"), request<unknown>("GET", "/roles"), request<unknown>("GET", "/audit-logs")]); return { branches, users: unwrapList(users).map((item) => ({ ...normaliseUser(item), isActive: Boolean(item.is_active ?? true), createdAt: String(item.created_at ?? "") })), roles: unwrapList(roles).map((item) => ({ id: Number(item.id), name: String(item.name), code: String(item.code) as RoleCode, description: String(item.description ?? "") })), auditLogs: unwrapList(auditLogs).map((item) => ({ id: Number(item.id), eventType: String(item.event_type ?? ""), summary: String(item.summary ?? ""), actorId: Number(item.actor_id ?? 0) || undefined, createdAt: String(item.created_at ?? "") })) }; }
 export async function createUser(data: { name: string; email: string; password: string; branchId: number | null; role: RoleCode }): Promise<AdminUser> { if (isMock) return mockCreateUser(data); const item = await request<Record<string, unknown>>("POST", "/users", { ...data, branch_id: data.branchId, roles: [data.role] }); return { ...normaliseUser(item), isActive: Boolean(item.is_active ?? true) }; }
 export async function createRole(data: { code: RoleCode; name: string; description: string }) { if (isMock) return data; return request("POST", "/roles", data); }
+
+const mapHandover = (raw: Record<string, unknown>, branch?: Branch): BranchHandover => {
+  const snapshotRaw = (raw.snapshot ?? null) as Record<string, unknown> | null;
+  const outgoing = raw.outgoing as Record<string, unknown> | undefined;
+  const incoming = raw.incoming as Record<string, unknown> | undefined;
+  const approver = raw.approver as Record<string, unknown> | undefined;
+  const audit = (raw.auditTrail ?? raw.audit_trail ?? []) as Array<Record<string, unknown>>;
+  const snapshot: HandoverSnapshot | null = snapshotRaw ? {
+    capturedAt: String(snapshotRaw.capturedAt ?? snapshotRaw.captured_at ?? ""),
+    membersByStatus: (snapshotRaw.membersByStatus ?? snapshotRaw.members_by_status ?? {}) as Record<string, number>,
+    membersTotal: Number(snapshotRaw.membersTotal ?? snapshotRaw.members_total ?? 0),
+    disbursementsByStage: (snapshotRaw.disbursementsByStage ?? snapshotRaw.disbursements_by_stage ?? {}) as Record<string, number>,
+    openDisbursementValue: Number(snapshotRaw.openDisbursementValue ?? snapshotRaw.open_disbursement_value ?? 0),
+    unpostedImportBatches: Number(snapshotRaw.unpostedImportBatches ?? snapshotRaw.unposted_import_batches ?? 0),
+    openReconciliationItems: Number(snapshotRaw.openReconciliationItems ?? snapshotRaw.open_reconciliation_items ?? 0),
+    latestClosedPeriodId: (snapshotRaw.latestClosedPeriodId ?? snapshotRaw.latest_closed_period ?? null) as number | null,
+  } : null;
+  const auditTrail: HandoverAuditEntry[] = audit.map((entry) => ({
+    id: Number(entry.id ?? 0),
+    event: String(entry.event ?? entry.event_type ?? "HANDOVER"),
+    summary: String(entry.summary ?? entry.description ?? ""),
+    actorId: Number(entry.actorId ?? entry.actor_id ?? 0) || undefined,
+    actorName: String(entry.actorName ?? (entry.actor as Record<string, unknown> | undefined)?.name ?? "") || undefined,
+    at: String(entry.at ?? entry.created_at ?? ""),
+  }));
+  return {
+    id: Number(raw.id),
+    branchId: Number(raw.branchId ?? raw.branch_id ?? branch?.id ?? 0),
+    branchName: String(raw.branchName ?? raw.branch_name ?? branch?.name ?? ""),
+    branchCode: String(raw.branchCode ?? raw.branch_code ?? branch?.code ?? ""),
+    outgoingUserId: Number(raw.outgoingUserId ?? raw.outgoing_user_id ?? 0) || null,
+    outgoingUserName: String(raw.outgoingUserName ?? outgoing?.name ?? "") || null,
+    incomingUserId: Number(raw.incomingUserId ?? raw.incoming_user_id ?? 0) || null,
+    incomingUserName: String(raw.incomingUserName ?? incoming?.name ?? "") || null,
+    status: String(raw.status ?? "DRAFT").toUpperCase() as BranchHandover["status"],
+    snapshot,
+    outgoingSignedAt: (raw.outgoingSignedAt ?? raw.outgoing_signed_at ?? null) as string | null,
+    outgoingNotes: (raw.outgoingNotes ?? raw.outgoing_notes ?? null) as string | null,
+    incomingSignedAt: (raw.incomingSignedAt ?? raw.incoming_signed_at ?? null) as string | null,
+    incomingNotes: (raw.incomingNotes ?? raw.incoming_notes ?? null) as string | null,
+    disputeReason: (raw.disputeReason ?? raw.dispute_reason ?? null) as string | null,
+    approvedBy: Number(raw.approvedBy ?? raw.approved_by ?? 0) || null,
+    approvedByName: String(raw.approvedByName ?? approver?.name ?? "") || null,
+    approvedAt: (raw.approvedAt ?? raw.approved_at ?? null) as string | null,
+    createdBy: Number(raw.createdBy ?? raw.created_by ?? 0) || undefined,
+    createdAt: String(raw.createdAt ?? raw.created_at ?? ""),
+    auditTrail,
+  };
+};
+
+const handoverPath = (branchId: number, handoverId?: number) => `/branches/${branchId}/handovers${handoverId === undefined ? "" : `/${handoverId}`}`;
+const fetchHandover = async (user: User, handover: Pick<BranchHandover, "id" | "branchId">): Promise<BranchHandover> => {
+  if (isMock) return mockGetHandover(user, handover.id);
+  return mapHandover(await request<Record<string, unknown>>("GET", handoverPath(handover.branchId, handover.id)));
+};
+
+export async function listHandovers(user: User, branchId?: number): Promise<BranchHandover[]> {
+  if (isMock) return mockListHandovers(user, branchId);
+  const branches = await listBranches();
+  const allowedBranches = user.branch ? branches.filter((branch) => branch.id === user.branch?.id) : branches;
+  const selectedBranches = branchId === undefined ? allowedBranches : allowedBranches.filter((branch) => branch.id === branchId);
+  const handoverLists = await Promise.all(selectedBranches.map(async (branch) => {
+    const items = unwrapList(await request<unknown>("GET", handoverPath(branch.id), undefined, { per_page: 100 }));
+    return items.map((item) => mapHandover(item, branch));
+  }));
+  return handoverLists.flat();
+}
+
+export async function listManagerCandidates(): Promise<User[]> {
+  if (isMock) return mockListManagerCandidates();
+  const items = unwrapList(await request<unknown>("GET", "/users", undefined, { per_page: 100 }));
+  return items.filter((item) => item.is_active !== false && item.is_active !== 0).map(normaliseUser).filter((candidate) => candidate.roles.includes("BRANCH_MANAGER"));
+}
+
+export async function openHandover(user: User, input: OpenHandoverInput): Promise<BranchHandover> {
+  if (isMock) return mockOpenHandover(user, input);
+  const [branches, handovers, candidates] = await Promise.all([listBranches(), listHandovers(user, input.branchId), listManagerCandidates()]);
+  const branch = branches.find((item) => item.id === input.branchId);
+  if (!branch) throw new Error("Branch not found or not accessible.");
+  if (!candidates.some((candidate) => candidate.id === input.incomingUserId)) throw new Error("Choose an active branch manager as the incoming officer.");
+  const isBranchManager = user.roles.includes("BRANCH_MANAGER");
+  const currentManagerId = isBranchManager && user.branch?.id === input.branchId ? user.id : input.outgoingUserId ?? null;
+  const existingOpen = handovers.some((item) => ["DRAFT", "PENDING_INCOMING", "PENDING_APPROVAL"].includes(item.status));
+  const error = openHandoverError(user, input, currentManagerId, existingOpen);
+  if (error) throw new Error(error);
+  const body: Record<string, unknown> = { incoming_user_id: input.incomingUserId };
+  if (input.outgoingUserId !== undefined) body.outgoing_user_id = input.outgoingUserId;
+  return mapHandover(await request<Record<string, unknown>>("POST", handoverPath(input.branchId), body), branch);
+}
+
+export async function signOutgoingHandover(user: User, handover: BranchHandover, notes?: string): Promise<BranchHandover> {
+  if (isMock) return mockSignOutgoingHandover(user, handover.id, notes);
+  const current = await fetchHandover(user, handover);
+  if (current.status !== "DRAFT" || current.outgoingUserId !== user.id) throw new Error("Only the named outgoing officer can sign this claim, and only while it awaits sign-off.");
+  const error = signNotesError(notes);
+  if (error) throw new Error(error);
+  return mapHandover(await request<Record<string, unknown>>("POST", `${handoverPath(handover.branchId, handover.id)}/sign-outgoing`, { notes: notes?.trim() || null }));
+}
+
+export async function acknowledgeHandover(user: User, handover: BranchHandover, notes?: string): Promise<BranchHandover> {
+  if (isMock) return mockAcknowledgeHandover(user, handover.id, notes);
+  const current = await fetchHandover(user, handover);
+  const error = acknowledgeError(user, current) ?? signNotesError(notes);
+  if (error) throw new Error(error);
+  return mapHandover(await request<Record<string, unknown>>("POST", `${handoverPath(handover.branchId, handover.id)}/acknowledge`, { notes: notes?.trim() || null }));
+}
+
+export async function disputeHandover(user: User, handover: BranchHandover, reason: string): Promise<BranchHandover> {
+  if (isMock) return mockDisputeHandover(user, handover.id, reason);
+  const current = await fetchHandover(user, handover);
+  const error = disputeError(user, current, reason);
+  if (error) throw new Error(error);
+  return mapHandover(await request<Record<string, unknown>>("POST", `${handoverPath(handover.branchId, handover.id)}/dispute`, { reason: reason.trim() }));
+}
+
+export async function approveHandover(user: User, handover: BranchHandover): Promise<BranchHandover> {
+  if (isMock) return mockApproveHandover(user, handover.id);
+  const current = await fetchHandover(user, handover);
+  const error = approveError(user, current);
+  if (error) throw new Error(error);
+  return mapHandover(await request<Record<string, unknown>>("POST", `${handoverPath(handover.branchId, handover.id)}/approve`, {}));
+}
+
+export async function postBranchManager(user: User, input: PostBranchManagerInput): Promise<BranchManagerAssignment> {
+  if (isMock) return mockPostBranchManager(user, input);
+  const assignmentResponse = unwrapList(await request<unknown>("GET", `/branches/${input.branchId}/assignments`, undefined, { per_page: 100 }));
+  const incumbent = assignmentResponse.find((item) => item.is_active === true || item.ended_at == null);
+  let handover: BranchHandover | null = null;
+  if (input.handoverId !== undefined) handover = await fetchHandover(user, { id: input.handoverId, branchId: input.branchId });
+  const currentOutgoingId = Number(incumbent?.user_id ?? 0) || null;
+  const error = transferBlockError(user, input, handover, currentOutgoingId);
+  if (error) throw new Error(error);
+  if (!user.roles.some((role) => role === "SUPER_ADMIN" || role === "SUB_ADMIN")) throw new Error("Only an administrator can post or replace a branch manager.");
+  const result = await request<Record<string, unknown>>("POST", `/branches/${input.branchId}/manager`, {
+    user_id: input.incomingUserId,
+    branch_handover_id: input.handoverId,
+    override_handover: Boolean(input.override),
+    reason: input.reason,
+  });
+  return {
+    id: Number(result.id),
+    branchId: Number(result.branchId ?? result.branch_id ?? input.branchId),
+    userId: Number(result.userId ?? result.user_id ?? input.incomingUserId),
+    isActive: Boolean(result.isActive ?? result.is_active ?? true),
+    startedAt: String(result.startedAt ?? result.started_at ?? ""),
+    endedAt: result.endedAt ?? result.ended_at ? String(result.endedAt ?? result.ended_at) : undefined,
+    endedReason: (result.endedReason ?? result.ended_reason ?? null) as string | null,
+  };
+}
+
 export async function getDisbursement(id: number): Promise<Disbursement> {
   const actor = session.getUser();
   if (!actor) throw new Error("Please sign in again.");
