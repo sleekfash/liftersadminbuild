@@ -3,3 +3,4 @@
 - [x] Add Branch Manager review drawer, matching Laravel/mock decisions and validation tests; sample approval/rejection and anti-self-review verified.
 - [ ] Verify Laravel review endpoints against the deployed API — blocked on the live API address and existing Laravel startup error (missing `files` service); local PHP syntax and self-approval regressions pass.
 - [x] Build Daily Branch Cash Register UI: till denomination count drawer, variance resolution, locking, branch-scoped mock API, and register workflow tests; browser-verified count → variance → approval → lock.
+- [ ] Finish branch-owned manager handover workflow: confirm outgoing manager can open and sign claims, incoming acceptance/dispute, transfer blocking, immutable branch records, audit trail, and frontend/Laravel verification.
