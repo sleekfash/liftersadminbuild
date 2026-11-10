@@ -3,6 +3,7 @@ namespace App\Services;
 
 use App\Enums\AuditEventType;
 use App\Enums\HandoverStatus;
+use App\Enums\RoleCode;
 use App\Models\Branch;
 use App\Models\BranchHandover;
 use App\Models\DisbursementRequest;
@@ -21,6 +22,18 @@ class BranchHandoverService
     public function create(Branch $branch, array $data, User $actor): BranchHandover
     {
         return DB::transaction(function () use ($branch, $data, $actor) {
+            $branch = Branch::query()->whereKey($branch->id)->lockForUpdate()->firstOrFail();
+            $incoming = User::query()->whereKey($data['incoming_user_id'])->lockForUpdate()->firstOrFail();
+            if (!$incoming->is_active || !$incoming->hasRole(RoleCode::BRANCH_MANAGER->value)) {
+                throw ValidationException::withMessages(['incoming_user_id' => 'Choose an active branch manager.']);
+            }
+            $outgoingId = (int) ($branch->current_manager_id ?? 0);
+            if (!$outgoingId || $outgoingId === (int) $incoming->id) {
+                throw ValidationException::withMessages(['incoming_user_id' => 'A handover requires a different incoming manager and an assigned outgoing manager.']);
+            }
+            if (isset($data['outgoing_user_id']) && (int) $data['outgoing_user_id'] !== $outgoingId) {
+                throw ValidationException::withMessages(['outgoing_user_id' => 'The outgoing officer must be the branch\'s current manager.']);
+            }
             $open = $branch->handovers()
                 ->whereNotIn('status', [HandoverStatus::COMPLETED->value, HandoverStatus::DISPUTED->value])
                 ->exists();
@@ -30,7 +43,7 @@ class BranchHandoverService
 
             $handover = BranchHandover::create([
                 'branch_id' => $branch->id,
-                'outgoing_user_id' => $data['outgoing_user_id'] ?? $branch->current_manager_id,
+                'outgoing_user_id' => $outgoingId,
                 'incoming_user_id' => $data['incoming_user_id'],
                 'status' => HandoverStatus::DRAFT->value,
                 'snapshot' => $this->snapshot($branch),
@@ -41,75 +54,69 @@ class BranchHandoverService
                 'branch_id' => $branch->id,
             ]);
 
-            return $handover->fresh();
+            return $handover->fresh(['branch', 'outgoing', 'incoming', 'approver', 'auditLogs.actor']);
         });
     }
 
     /** Outgoing officer signs off the frozen report. */
     public function signOutgoing(BranchHandover $handover, ?string $notes, User $actor): BranchHandover
     {
-        $this->assertStatus($handover, [HandoverStatus::DRAFT->value]);
-
-        $handover->forceFill([
-            'outgoing_signed_at' => now(),
-            'outgoing_notes' => $notes,
-            'status' => HandoverStatus::PENDING_INCOMING->value,
-        ])->save();
-
-        $this->auditService->record($actor, AuditEventType::HANDOVER, 'Outgoing officer signed handover', $handover);
-
-        return $handover->fresh();
+        return DB::transaction(function () use ($handover, $notes, $actor) {
+            $handover = BranchHandover::query()->whereKey($handover->id)->lockForUpdate()->firstOrFail();
+            $this->assertStatus($handover, [HandoverStatus::DRAFT->value]);
+            if ((int) $handover->outgoing_user_id !== (int) $actor->id) {
+                throw ValidationException::withMessages(['actor' => 'Only the named outgoing officer may sign this handover.']);
+            }
+            $handover->forceFill(['outgoing_signed_at' => now(), 'outgoing_notes' => $notes, 'status' => HandoverStatus::PENDING_INCOMING->value])->save();
+            $this->auditService->record($actor, AuditEventType::HANDOVER, 'Outgoing officer signed handover', $handover, ['from_status' => HandoverStatus::DRAFT->value, 'to_status' => HandoverStatus::PENDING_INCOMING->value]);
+            return $handover->fresh(['branch', 'outgoing', 'incoming', 'approver', 'auditLogs.actor']);
+        });
     }
 
     /** Incoming officer consents to the report. */
     public function acknowledgeIncoming(BranchHandover $handover, ?string $notes, User $actor): BranchHandover
     {
-        $this->assertStatus($handover, [HandoverStatus::PENDING_INCOMING->value]);
-
-        $handover->forceFill([
-            'incoming_signed_at' => now(),
-            'incoming_notes' => $notes,
-            'status' => HandoverStatus::PENDING_APPROVAL->value,
-        ])->save();
-
-        $this->auditService->record($actor, AuditEventType::HANDOVER, 'Incoming officer acknowledged handover', $handover);
-
-        return $handover->fresh();
+        return DB::transaction(function () use ($handover, $notes, $actor) {
+            $handover = BranchHandover::query()->whereKey($handover->id)->lockForUpdate()->firstOrFail();
+            $this->assertStatus($handover, [HandoverStatus::PENDING_INCOMING->value]);
+            if ((int) $handover->incoming_user_id !== (int) $actor->id) {
+                throw ValidationException::withMessages(['actor' => 'Only the named incoming officer may accept this handover.']);
+            }
+            $handover->forceFill(['incoming_signed_at' => now(), 'incoming_notes' => $notes, 'status' => HandoverStatus::PENDING_APPROVAL->value])->save();
+            $this->auditService->record($actor, AuditEventType::HANDOVER, 'Incoming officer acknowledged handover', $handover, ['from_status' => HandoverStatus::PENDING_INCOMING->value, 'to_status' => HandoverStatus::PENDING_APPROVAL->value]);
+            return $handover->fresh(['branch', 'outgoing', 'incoming', 'approver', 'auditLogs.actor']);
+        });
     }
 
     public function dispute(BranchHandover $handover, string $reason, User $actor): BranchHandover
     {
-        $this->assertStatus($handover, [
-            HandoverStatus::DRAFT->value,
-            HandoverStatus::PENDING_INCOMING->value,
-            HandoverStatus::PENDING_APPROVAL->value,
-        ]);
-
-        $handover->forceFill([
-            'status' => HandoverStatus::DISPUTED->value,
-            'dispute_reason' => $reason,
-        ])->save();
-
-        $this->auditService->record($actor, AuditEventType::HANDOVER, 'Branch handover disputed', $handover, [
-            'reason' => $reason,
-        ]);
-
-        return $handover->fresh();
+        return DB::transaction(function () use ($handover, $reason, $actor) {
+            $handover = BranchHandover::query()->whereKey($handover->id)->lockForUpdate()->firstOrFail();
+            $this->assertStatus($handover, [HandoverStatus::DRAFT->value, HandoverStatus::PENDING_INCOMING->value, HandoverStatus::PENDING_APPROVAL->value]);
+            if (!in_array((int) $actor->id, [(int) $handover->outgoing_user_id, (int) $handover->incoming_user_id], true)
+                && !$actor->hasAnyRole([RoleCode::SUPER_ADMIN->value, RoleCode::SUB_ADMIN->value])) {
+                throw ValidationException::withMessages(['actor' => 'Only a handover party or administrator may dispute this handover.']);
+            }
+            $from = $handover->status;
+            $handover->forceFill(['status' => HandoverStatus::DISPUTED->value, 'dispute_reason' => $reason])->save();
+            $this->auditService->record($actor, AuditEventType::HANDOVER, 'Branch handover disputed', $handover, ['reason' => $reason, 'from_status' => $from, 'to_status' => HandoverStatus::DISPUTED->value]);
+            return $handover->fresh(['branch', 'outgoing', 'incoming', 'approver', 'auditLogs.actor']);
+        });
     }
 
     public function approve(BranchHandover $handover, User $actor): BranchHandover
     {
-        $this->assertStatus($handover, [HandoverStatus::PENDING_APPROVAL->value]);
-
-        $handover->forceFill([
-            'status' => HandoverStatus::COMPLETED->value,
-            'approved_by' => $actor->id,
-            'approved_at' => now(),
-        ])->save();
-
-        $this->auditService->record($actor, AuditEventType::HANDOVER, 'Branch handover approved and completed', $handover);
-
-        return $handover->fresh();
+        return DB::transaction(function () use ($handover, $actor) {
+            $handover = BranchHandover::query()->whereKey($handover->id)->lockForUpdate()->firstOrFail();
+            $this->assertStatus($handover, [HandoverStatus::PENDING_APPROVAL->value]);
+            if (!$actor->hasAnyRole([RoleCode::SUPER_ADMIN->value, RoleCode::SUB_ADMIN->value])
+                || in_array((int) $actor->id, [(int) $handover->outgoing_user_id, (int) $handover->incoming_user_id], true)) {
+                throw ValidationException::withMessages(['actor' => 'An administrator who is not part of the handover must approve it.']);
+            }
+            $handover->forceFill(['status' => HandoverStatus::COMPLETED->value, 'approved_by' => $actor->id, 'approved_at' => now()])->save();
+            $this->auditService->record($actor, AuditEventType::HANDOVER, 'Branch handover approved and completed', $handover, ['from_status' => HandoverStatus::PENDING_APPROVAL->value, 'to_status' => HandoverStatus::COMPLETED->value]);
+            return $handover->fresh(['branch', 'outgoing', 'incoming', 'approver', 'auditLogs.actor']);
+        });
     }
 
     /** Printable/exportable signed report payload. */
