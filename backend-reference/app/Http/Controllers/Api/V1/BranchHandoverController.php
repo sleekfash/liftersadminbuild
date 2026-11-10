@@ -24,7 +24,16 @@ class BranchHandoverController extends Controller
     {
         $this->authorize('viewAny', BranchHandover::class);
 
-        $query = $this->scopeToBranch($branch->handovers()->getQuery(), $request->user());
+        $user = $request->user();
+        $query = $branch->handovers()->getQuery();
+        if (!$this->userIsCrossBranch($user)) {
+            $branchId = (int) ($user->branch_id ?? 0);
+            $query->where(function ($builder) use ($branchId, $user) {
+                $builder->where('branch_id', $branchId)
+                    ->orWhere('outgoing_user_id', $user->id)
+                    ->orWhere('incoming_user_id', $user->id);
+            });
+        }
 
         return response()->json([
             'data' => BranchHandoverResource::collection(
@@ -35,11 +44,19 @@ class BranchHandoverController extends Controller
 
     public function store(StoreBranchHandoverRequest $request, Branch $branch): JsonResponse
     {
-        $this->authorize('create', BranchHandover::class);
+        $this->authorize('create', [BranchHandover::class, $branch]);
+
+        $data = $request->validated();
+        if (!$request->user()->hasAnyRole([
+            \App\Enums\RoleCode::SUPER_ADMIN->value,
+            \App\Enums\RoleCode::SUB_ADMIN->value,
+        ])) {
+            $data['outgoing_user_id'] = $request->user()->id;
+        }
 
         return response()->json([
             'message' => 'Branch handover opened with a frozen portfolio snapshot.',
-            'data' => new BranchHandoverResource($this->service->create($branch, $request->validated(), $request->user())),
+            'data' => new BranchHandoverResource($this->service->create($branch, $data, $request->user())),
         ], 201);
     }
 
