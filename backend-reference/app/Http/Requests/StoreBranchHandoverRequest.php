@@ -2,6 +2,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\RoleCode;
+use App\Models\Branch;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -9,13 +10,19 @@ class StoreBranchHandoverRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return (bool) $this->user()?->hasAnyRole([RoleCode::SUPER_ADMIN->value, RoleCode::SUB_ADMIN->value]);
+        $user = $this->user();
+        $branch = $this->route('branch');
+        if (!$user || !$branch instanceof Branch) return false;
+        return $user->hasAnyRole([RoleCode::SUPER_ADMIN->value, RoleCode::SUB_ADMIN->value])
+            || ($user->hasRole(RoleCode::BRANCH_MANAGER->value)
+                && (int) $user->branch_id === (int) $branch->id
+                && (int) $branch->current_manager_id === (int) $user->id);
     }
 
     public function rules(): array
     {
         return [
-            'outgoing_user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'outgoing_user_id' => ['prohibited_unless:actor_is_admin', 'nullable', 'integer', 'exists:users,id'],
             'incoming_user_id' => ['required', 'integer', 'exists:users,id'],
         ];
     }
