@@ -16,6 +16,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/branches/{branch}/manager', [BranchManagerController::class, 'store']);
         Route::delete('/branches/{branch}/manager', [BranchManagerController::class, 'destroy']);
         // Handover / consent workflow between outgoing and incoming officers.
+        Route::get('/handovers/mine', [BranchHandoverController::class, 'mine']);
+        Route::get('/handover-candidates', [BranchHandoverController::class, 'candidates']);
         Route::get('/branches/{branch}/handovers', [BranchHandoverController::class, 'index']);
         Route::post('/branches/{branch}/handovers', [BranchHandoverController::class, 'store']);
         Route::get('/branches/{branch}/handovers/{handover}', [BranchHandoverController::class, 'show']);

@@ -14,4 +14,6 @@ class AuditLog extends Model
         'completed_at'=>'datetime','resolved_at'=>'datetime','locked_at'=>'datetime','occurred_on'=>'date'
     ];
 
+    public function actor() { return $this->belongsTo(User::class, 'actor_id'); }
+
 }
