@@ -26,6 +26,7 @@ class BranchHandover extends Model
     public function outgoing() { return $this->belongsTo(User::class, 'outgoing_user_id'); }
     public function incoming() { return $this->belongsTo(User::class, 'incoming_user_id'); }
     public function approver() { return $this->belongsTo(User::class, 'approved_by'); }
+    public function auditLogs() { return $this->hasMany(AuditLog::class, 'auditable_id')->where('auditable_type', self::class)->orderBy('created_at'); }
 
     public function isCompleted(): bool
     {
