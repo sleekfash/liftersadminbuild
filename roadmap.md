@@ -4,4 +4,4 @@
 - [ ] Verify Laravel review endpoints against the deployed API — blocked on the live API address and existing Laravel startup error (missing `files` service); local PHP syntax and self-approval regressions pass.
 - [x] Build Daily Branch Cash Register UI: till denomination count drawer, variance resolution, locking, branch-scoped mock API, and register workflow tests; browser-verified count → variance → approval → lock.
 - [ ] Finish branch-owned manager handover workflow: confirm outgoing manager can open and sign claims, incoming acceptance/dispute, transfer blocking, immutable branch records, audit trail, and frontend/Laravel verification.
-- [ ] Resume the in-progress handover implementation when requested; paused by the user on 2026-11-11.
+- [ ] Add handover event notifications, branch-level decision history, 1/3-day reminders, and day-5 escalation; app email awaits sender-domain setup.
